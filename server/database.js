@@ -32,6 +32,43 @@ db.serialize(() => {
 // ===============================
 
 db.run(`
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  full_name TEXT,
+  role TEXT DEFAULT 'EMPLOYEE',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+`);
+
+
+// Create first admin user if no users exist
+db.get("SELECT COUNT(*) AS count FROM users", [], (err, row) => {
+  if (err) {
+    console.error("⚠️ Unable to check users table:", err.message);
+    return;
+  }
+
+  if (row && row.count === 0) {
+    const bcrypt = require("bcrypt");
+    const hashedPassword = bcrypt.hashSync("admin123", 10);
+
+    db.run(
+      `INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)`,
+      ["admin", hashedPassword, "Administrator", "ADMIN"],
+      (insertErr) => {
+        if (insertErr) {
+          console.error("⚠️ Unable to create default admin user:", insertErr.message);
+        } else {
+          console.log("✅ Default admin user created: admin/admin123");
+        }
+      }
+    );
+  }
+});
+
+db.run(`
 CREATE TABLE IF NOT EXISTS client_transactions (
 
     id INTEGER PRIMARY KEY AUTOINCREMENT,

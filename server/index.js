@@ -7,6 +7,8 @@ const productsRoutes = require("./routes/products");
 const db = require("./database");
 const systemProductsRoutes = require("./routes/systemProducts");
 const clientsRoutes = require("./routes/clients");
+const authRoutes = require("./routes/auth");
+const { authenticateToken, authorizeRoles } = require("./middleware/auth");
 const projectsRoutes = require("./routes/projects");
 const invoicesRoutes = require("./routes/invoices");
 const systemsRoutes = require("./routes/systems");
@@ -38,30 +40,88 @@ app.use(
 // ======================
 // Routes
 // ======================
-app.use(
-"/employee-evaluations",
-employeeEvaluationsRoutes
-);
-app.use("/pdf", pdfRoutes);
-app.use("/clients", clientsRoutes);
+app.use("/auth", authRoutes);
 const employeesRoutes = require("./routes/employees");
 const companyRouter = require("./routes/company");
-app.use("/employees", employeesRoutes);
-app.use("/company", companyRouter);
-app.use("/projects", projectsRoutes);
-app.use("/stock", stockRoutes);
-app.use("/invoices", invoicesRoutes);
+
 app.use(
- "/project-materials",
- require("./routes/projectMaterials")
+  "/employee-evaluations",
+  authenticateToken,
+  authorizeRoles("ADMIN"),
+  employeeEvaluationsRoutes
 );
-app.use("/systems", systemsRoutes);
-
-app.use("/products", productsRoutes);
-
-app.use("/system-products", systemProductsRoutes);
-
-app.use("/calculator", calculatorRoutes);
+app.use(
+  "/pdf",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  pdfRoutes
+);
+app.use(
+  "/clients",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  clientsRoutes
+);
+app.use(
+  "/employees",
+  authenticateToken,
+  authorizeRoles("ADMIN"),
+  employeesRoutes
+);
+app.use(
+  "/company",
+  authenticateToken,
+  authorizeRoles("ADMIN"),
+  companyRouter
+);
+app.use(
+  "/projects",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  projectsRoutes
+);
+app.use(
+  "/stock",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  stockRoutes
+);
+app.use(
+  "/invoices",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  invoicesRoutes
+);
+app.use(
+  "/project-materials",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  require("./routes/projectMaterials")
+);
+app.use(
+  "/systems",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  systemsRoutes
+);
+app.use(
+  "/products",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  productsRoutes
+);
+app.use(
+  "/system-products",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  systemProductsRoutes
+);
+app.use(
+  "/calculator",
+  authenticateToken,
+  authorizeRoles("ADMIN", "USER"),
+  calculatorRoutes
+);
 
 // ======================
 // Dashboard

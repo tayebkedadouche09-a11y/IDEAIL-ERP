@@ -26,7 +26,7 @@ import ScienceIcon from "@mui/icons-material/Science";
 
 
 import { useLanguage } from "../context/LanguageContext";
-
+import { useAuth } from "../context/AuthContext";
 
 const drawerWidth = 250;
 
@@ -36,7 +36,7 @@ export default function Sidebar() {
 
 
   const location = useLocation();
-
+  const { user } = useAuth();
 
   const { t } = useLanguage();
 
@@ -185,7 +185,13 @@ export default function Sidebar() {
             SARL IDEAIL ROUVETMON
 
           </Typography>
-
+          {user && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+              {user.full_name || user.username}
+              <br />
+              {user.role}
+            </Typography>
+          )}
 
         </div>
 

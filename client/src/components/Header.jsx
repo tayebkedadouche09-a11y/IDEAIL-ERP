@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   AppBar,
@@ -8,20 +9,22 @@ import {
   Box,
   Menu,
   MenuItem,
+  Button,
 } from "@mui/material";
-
 
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LanguageIcon from "@mui/icons-material/Language";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 
 
 export default function Header() {
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
 
   const {
@@ -87,20 +90,21 @@ export default function Header() {
 
 
 
-        <Typography
-
-          variant="h6"
-
-          sx={{
-            flexGrow:1,
-            fontWeight:"bold"
-          }}
-
-        >
-
-          IDEAIL ERP
-
-        </Typography>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight:"bold"
+            }}
+          >
+            IDEAIL ERP
+          </Typography>
+          {user && (
+            <Typography variant="body2" color="text.secondary">
+              {user.full_name || user.username} • {user.role}
+            </Typography>
+          )}
+        </Box>
 
 
 
@@ -189,7 +193,16 @@ export default function Header() {
 
           </IconButton>
 
-
+          <Button
+            color="inherit"
+            onClick={() => {
+              logout();
+              navigate("/login", { replace: true });
+            }}
+            sx={{ ml: 1 }}
+          >
+            Logout
+          </Button>
 
         </Box>
 
