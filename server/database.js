@@ -1,8 +1,10 @@
+const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
 
+const dbPath = path.join(__dirname, "ideail.db");
 
 // إنشاء أو فتح قاعدة البيانات
-const db = new sqlite3.Database("./ideail.db", (err) => {
+const db = new sqlite3.Database(dbPath, (err) => {
 
   if (err) {
 
@@ -16,6 +18,11 @@ const db = new sqlite3.Database("./ideail.db", (err) => {
 
 });
 
+db.run("PRAGMA foreign_keys = ON", (err) => {
+  if (err) {
+    console.error("⚠️ Unable to enable foreign keys:", err.message);
+  }
+});
 
 // إنشاء الجداول
 db.serialize(() => {
@@ -455,35 +462,7 @@ CREATE TABLE IF NOT EXISTS project_materials (
 
 )
 `);
-// ===============================
-// PROJECT MATERIALS
-// مواد المشاريع
-// ===============================
 
-db.run(`
-CREATE TABLE IF NOT EXISTS project_materials (
-
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    project_id INTEGER NOT NULL,
-
-    product_id INTEGER NOT NULL,
-
-    quantity REAL DEFAULT 0,
-
-    total_cost REAL DEFAULT 0,
-
-    notes TEXT,
-
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-
-    FOREIGN KEY(project_id) REFERENCES projects(id),
-
-    FOREIGN KEY(product_id) REFERENCES products(id)
-
-)
-`);
 module.exports = db;
 // إضافة معلومات إضافية للعملاء
 

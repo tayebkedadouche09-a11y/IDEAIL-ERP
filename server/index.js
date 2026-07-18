@@ -1,4 +1,5 @@
 
+require("dotenv").config();
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
@@ -164,9 +165,16 @@ app.get("/", (req, res) => {
 
 
 
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    service: "IDEAIL ERP API",
+  });
+});
+
 // ======================
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 
 app.listen(PORT, () => {
@@ -175,4 +183,9 @@ app.listen(PORT, () => {
     `🚀 IDEAIL ERP Server running on http://localhost:${PORT}`
   );
 
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
 });
