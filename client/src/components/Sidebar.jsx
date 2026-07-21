@@ -269,7 +269,7 @@ export default function Sidebar() {
           IDEAIL ERP
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {t("Enterprise Management System")}
+          {t("enterpriseManagementSystem")}
         </Typography>
       </Toolbar>
 

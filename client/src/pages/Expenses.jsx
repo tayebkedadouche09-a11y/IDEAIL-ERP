@@ -99,7 +99,7 @@ export default function Expenses() {
     loadData();
   }, [page, limit, searchTerm]);
 
-  async function loadData() {
+async function loadData() {
     setLoading(true);
     try {
       const [expensesRes, categoriesRes, projectsRes, suppliersRes, employeesRes, vehiclesRes] =
@@ -107,7 +107,7 @@ export default function Expenses() {
           api.get(`/financial/expenses?search=${searchTerm}&page=${page}&limit=${limit}`),
           api.get("/financial/expense-categories"),
           api.get("/projects"),
-          api.get("/financial/suppliers"),
+          api.get("/suppliers"),
           api.get("/employees"),
           api.get("/vehicles"),
         ]);

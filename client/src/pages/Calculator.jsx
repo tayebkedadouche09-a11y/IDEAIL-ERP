@@ -28,6 +28,7 @@ import EnterpriseSummaryBox from "../components/EnterpriseSummaryBox";
 import EnterpriseMetricCard from "../components/EnterpriseMetricCard";
 import EnterpriseEmptyState from "../components/EnterpriseEmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { useLanguage } from "../context/LanguageContext";
 
 const SECTORS = [
   { value: "industrial", label: "Industrial Works", icon: "🏭" },

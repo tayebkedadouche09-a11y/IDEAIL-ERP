@@ -27,6 +27,7 @@ import EnterpriseSection from "../components/EnterpriseSection";
 import EnterpriseTableToolbar from "../components/EnterpriseTableToolbar";
 import EnterpriseEmptyState from "../components/EnterpriseEmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { useLanguage } from "../context/LanguageContext";
 
 const localizer = momentLocalizer(moment);
 
@@ -53,6 +54,7 @@ const emptyForm = {
 };
 
 export default function Calendar() {
+  const { t } = useLanguage();
   const [events, setEvents] = useState([]);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
@@ -83,6 +85,8 @@ export default function Calendar() {
 
   useEffect(() => {
     loadData();
+    syncProjectDeadlines();
+    syncPaymentDueDates();
   }, [page, limit, searchTerm, typeFilter]);
 
   async function loadData() {
@@ -96,7 +100,7 @@ export default function Calendar() {
           api.get("/employees"),
           api.get("/calendar/stats/summary"),
         ]);
-      
+
       // Handle both old format (array) and new format (object with data)
       if (Array.isArray(eventsRes.data)) {
         setEvents(eventsRes.data);
@@ -114,9 +118,27 @@ export default function Calendar() {
       setStats(statsRes.data || stats);
     } catch (err) {
       console.log(err);
-      showSnackbar("Error loading calendar data", "error");
+      showSnackbar(t("errorOccurred"), "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Sync project deadlines to calendar
+  async function syncProjectDeadlines() {
+    try {
+      await api.post("/calendar/sync/project-deadlines");
+    } catch (err) {
+      console.log("Could not sync project deadlines:", err);
+    }
+  }
+
+  // Sync payment due dates to calendar
+  async function syncPaymentDueDates() {
+    try {
+      await api.post("/calendar/sync/payment-due-dates");
+    } catch (err) {
+      console.log("Could not sync payment due dates:", err);
     }
   }
 
@@ -157,7 +179,7 @@ export default function Calendar() {
 
   async function save() {
     if (!form.title || !form.event_date) {
-      showSnackbar("Title and date are required", "error");
+      showSnackbar(t("requiredField"), "error");
       return;
     }
 
@@ -165,17 +187,17 @@ export default function Calendar() {
     try {
       if (editId) {
         await api.put(`/calendar/${editId}`, form);
-        showSnackbar("Event updated", "success");
+        showSnackbar(t("updatedSuccessfully"), "success");
       } else {
         await api.post("/calendar", form);
-        showSnackbar("Event created", "success");
+        showSnackbar(t("savedSuccessfully"), "success");
       }
       setOpen(false);
       setEditId(null);
       setForm(emptyForm);
       loadData();
     } catch (err) {
-      showSnackbar(err.response?.data?.error || "Save failed", "error");
+      showSnackbar(err.response?.data?.error || t("errorSaving"), "error");
     } finally {
       setSaving(false);
     }
@@ -193,10 +215,10 @@ export default function Calendar() {
       await api.delete(`/calendar/${deleteId}`);
       setOpenDelete(false);
       setDeleteId(null);
-      showSnackbar("Event deleted", "success");
+      showSnackbar(t("deletedSuccessfully"), "success");
       loadData();
     } catch (err) {
-      showSnackbar(err.response?.data?.error || "Delete failed", "error");
+      showSnackbar(err.response?.data?.error || t("errorDeleting"), "error");
     }
   }
 
@@ -214,9 +236,9 @@ export default function Calendar() {
   return (
     <Box>
       <PageHeader
-        title="Calendar"
-        subtitle="Manage events, deadlines, and appointments"
-        actionLabel="Add Event"
+        title={t("calendar")}
+        subtitle={t("manageCalendar")}
+        actionLabel={t("add")}
         onAction={addNew}
         icon="📅"
       />
@@ -233,40 +255,40 @@ export default function Calendar() {
         </Snackbar>
       )}
 
-      <EnterpriseSection title="Statistics" sx={{ mb: 3 }}>
+      <EnterpriseSection title={t("statisticsStat")} sx={{ mb: 3 }}>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           <EnterpriseStatCard
-            title="Total Events"
+            title={t("totalEvents")}
             value={stats.total}
             color="primary"
             icon="📊"
           />
           <EnterpriseStatCard
-            title="This Month"
+            title={t("thisMonth")}
             value={stats.thisMonth}
             color="info"
             icon="📅"
           />
           <EnterpriseStatCard
-            title="Upcoming"
+            title={t("upcomingEvents")}
             value={stats.upcoming}
             color="warning"
             icon="⏳"
           />
           <EnterpriseStatCard
-            title="Completed"
+            title={t("completedEvents")}
             value={stats.completed}
             color="success"
             icon="✅"
           />
           <EnterpriseStatCard
-            title="Project Deadlines"
+            title={t("projectDeadlines")}
             value={stats.projectDeadlines}
             color="default"
             icon="📁"
           />
           <EnterpriseStatCard
-            title="Payments Due"
+            title={t("paymentsDue")}
             value={stats.paymentsDue}
             color="error"
             icon="💰"
@@ -274,7 +296,7 @@ export default function Calendar() {
         </Box>
       </EnterpriseSection>
 
-      <EnterpriseSection title="Calendar View" sx={{ mb: 3 }}>
+      <EnterpriseSection title={t("calendar")} sx={{ mb: 3 }}>
         <Box sx={{ height: 500 }}>
           <BigCalendar
             localizer={localizer}
@@ -293,21 +315,21 @@ export default function Calendar() {
       <EnterpriseTableToolbar
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search events..."
-        filters={[
-          { value: "all", label: "All Types" },
-          ...EVENT_TYPES.map(t => ({ value: t.value, label: t.label })),
-        ]}
+        searchPlaceholder={t("searchEvents")}
+          filters={[
+            { value: "all", label: t("all") },
+            ...EVENT_TYPES.map((et) => ({ value: et.value, label: t(et.key) || et.label })),
+          ]}
         filterValue={typeFilter}
         onFilterChange={setTypeFilter}
         onRefresh={loadData}
       />
 
-      <EnterpriseSection title="Events List" loading={loading}>
+      <EnterpriseSection title={t("eventList")} loading={loading}>
         {filteredEvents.length === 0 ? (
           <EnterpriseEmptyState
-            message="No events found"
-            actionLabel="Add your first event"
+            message={t("noEvents")}
+            actionLabel={t("addFirst")}
             onAction={addNew}
           />
         ) : (
@@ -315,12 +337,12 @@ export default function Calendar() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Date</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Title</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Type</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Related</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Status</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Actions</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("date")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("title")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("type")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("related")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("status")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -333,7 +355,7 @@ export default function Calendar() {
                       </Typography>
                     </td>
                     <td style={{ padding: "12px" }}>
-                      <Chip label={EVENT_TYPES.find(t => t.value === event.type)?.label || event.type} size="small" />
+                    <Chip label={EVENT_TYPES.find(et => et.value === event.type)?.label || event.type} size="small" />
                     </td>
                     <td style={{ padding: "12px" }}>
                       {event.project_name || event.client_name || "-"}
@@ -343,12 +365,12 @@ export default function Calendar() {
                     </td>
                     <td style={{ padding: "12px" }}>
                       <Box sx={{ display: "flex", gap: 0.5 }}>
-                        <Tooltip title="Edit">
+                        <Tooltip title={t("edit")}>
                           <IconButton size="small" color="primary" onClick={() => editEvent(event)}>
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete">
+                        <Tooltip title={t("delete")}>
                           <IconButton size="small" color="error" onClick={() => openDeleteDialog(event.id)}>
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -373,8 +395,8 @@ export default function Calendar() {
                   setPage(1);
                 }}
                 rowsPerPageOptions={[10, 20, 50, 100]}
-                labelRowsPerPage="Rows per page"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+                labelRowsPerPage={t("rowsPerPage")}
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} ${t("of")} ${count}`}
               />
             )}
           </Box>
@@ -384,13 +406,13 @@ export default function Calendar() {
       {/* Event Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editId ? "Edit Event" : "Add Event"}
+          {editId ? t("editEvent") : t("addEvent")}
         </DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
             margin="normal"
-            label="Title"
+            label={t("eventTitle")}
             name="title"
             value={form.title}
             onChange={change}
@@ -399,7 +421,7 @@ export default function Calendar() {
           <TextField
             fullWidth
             margin="normal"
-            label="Description"
+            label={t("description")}
             name="description"
             value={form.description}
             onChange={change}
@@ -410,7 +432,7 @@ export default function Calendar() {
             fullWidth
             margin="normal"
             type="date"
-            label="Date"
+            label={t("eventDate")}
             name="event_date"
             value={form.event_date}
             onChange={change}
@@ -420,7 +442,7 @@ export default function Calendar() {
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
             <TextField
               fullWidth
-              label="Start Time"
+              label={t("startTime")}
               name="start_time"
               type="time"
               value={form.start_time}
@@ -429,7 +451,7 @@ export default function Calendar() {
             />
             <TextField
               fullWidth
-              label="End Time"
+              label={t("endTime")}
               name="end_time"
               type="time"
               value={form.end_time}
@@ -441,25 +463,25 @@ export default function Calendar() {
             select
             fullWidth
             margin="normal"
-            label="Type"
+            label={t("eventType")}
             name="type"
             value={form.type}
             onChange={change}
           >
-            {EVENT_TYPES.map((t) => (
-              <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+            {EVENT_TYPES.map((et) => (
+              <MenuItem key={et.value} value={et.value}>{t(et.key) || et.label}</MenuItem>
             ))}
           </TextField>
           <TextField
             select
             fullWidth
             margin="normal"
-            label="Project"
+            label={t("project")}
             name="project_id"
             value={form.project_id}
             onChange={change}
           >
-            <MenuItem value="">-- None --</MenuItem>
+            <MenuItem value="">-- {t("none")} --</MenuItem>
             {projects.map((p) => (
               <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
             ))}
@@ -468,12 +490,12 @@ export default function Calendar() {
             select
             fullWidth
             margin="normal"
-            label="Client"
+            label={t("client")}
             name="client_id"
             value={form.client_id}
             onChange={change}
           >
-            <MenuItem value="">-- None --</MenuItem>
+            <MenuItem value="">-- {t("none")} --</MenuItem>
             {clients.map((c) => (
               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
             ))}
@@ -482,12 +504,12 @@ export default function Calendar() {
             select
             fullWidth
             margin="normal"
-            label="Employee"
+            label={t("employee")}
             name="employee_id"
             value={form.employee_id}
             onChange={change}
           >
-            <MenuItem value="">-- None --</MenuItem>
+            <MenuItem value="">-- {t("none")} --</MenuItem>
             {employees.map((e) => (
               <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>
             ))}
@@ -496,20 +518,20 @@ export default function Calendar() {
             select
             fullWidth
             margin="normal"
-            label="Status"
+            label={t("status")}
             name="status"
             value={form.status}
             onChange={change}
           >
-            <MenuItem value="planned">Planned</MenuItem>
-            <MenuItem value="in_progress">In Progress</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
+            <MenuItem value="planned">{t("planned")}</MenuItem>
+            <MenuItem value="in_progress">{t("inProgress")}</MenuItem>
+            <MenuItem value="completed">{t("completed")}</MenuItem>
+            <MenuItem value="cancelled">{t("cancelled")}</MenuItem>
           </TextField>
           <TextField
             fullWidth
             margin="normal"
-            label="Notes"
+            label={t("notes")}
             name="notes"
             value={form.notes}
             onChange={change}
@@ -518,9 +540,9 @@ export default function Calendar() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={() => setOpen(false)}>{t("cancel")}</Button>
           <Button variant="contained" onClick={save} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? t("saving") : t("save")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -530,9 +552,9 @@ export default function Calendar() {
         open={openDelete}
         onClose={() => setOpenDelete(false)}
         onConfirm={deleteEvent}
-        title="Delete Event"
-        message="Are you sure you want to delete this event?"
-        confirmText="Delete"
+        title={t("deleteEvent")}
+        message={t("confirmDelete")}
+        confirmText={t("delete")}
         type="error"
       />
     </Box>

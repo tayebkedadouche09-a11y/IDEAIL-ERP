@@ -15,9 +15,15 @@ const invoiceStatusMap = {
   "غير مدفوعة": { key: "unpaid", color: "warning", icon: ScheduleIcon },
   "ملغاة": { key: "cancelled", color: "error", icon: CancelIcon },
   "draft": { key: "draft", color: "default", icon: ScheduleIcon },
+  "Draft": { key: "draft", color: "default", icon: ScheduleIcon },
   "sent": { key: "sent", color: "info", icon: ScheduleIcon },
+  "Issued": { key: "issued", color: "info", icon: ScheduleIcon },
   "accepted": { key: "approved", color: "success", icon: CheckCircleIcon },
+  "Accepted": { key: "accepted", color: "success", icon: CheckCircleIcon },
   "refused": { key: "rejected", color: "error", icon: CancelIcon },
+  "Paid": { key: "paid", color: "success", icon: CheckCircleIcon },
+  "Partially Paid": { key: "partially_paid", color: "warning", icon: ScheduleIcon },
+  "Cancelled": { key: "cancelled", color: "error", icon: CancelIcon },
 };
 
 // Status mapping for projects
@@ -35,9 +41,18 @@ const clientStatusMap = {
   "محظور": { key: "blocked", color: "error", icon: BlockIcon },
 };
 
+// Status mapping for devis (quotes)
+const devisStatusMap = {
+  "brouillon": { key: "draft", color: "default", icon: ScheduleIcon },
+  "envoyé": { key: "sent", color: "info", icon: ScheduleIcon },
+  "accepté": { key: "accepted", color: "success", icon: CheckCircleIcon },
+  "refusé": { key: "rejected", color: "error", icon: CancelIcon },
+  "converti": { key: "converted", color: "secondary", icon: CheckCircleIcon },
+};
+
 export default function StatusChip({ status, type = "invoice", ...props }) {
   const { t } = useLanguage();
-  const statusMap = type === "project" ? projectStatusMap : type === "client" ? clientStatusMap : invoiceStatusMap;
+  const statusMap = type === "project" ? projectStatusMap : type === "client" ? clientStatusMap : type === "devis" ? devisStatusMap : invoiceStatusMap;
   const statusInfo = statusMap[status] || { key: status, color: "default" };
   const Icon = statusInfo.icon;
 

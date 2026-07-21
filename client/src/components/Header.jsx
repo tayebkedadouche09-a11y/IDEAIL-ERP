@@ -81,7 +81,10 @@ const routeBreadcrumbs = {
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { language, changeLanguage, t } = useLanguage();
+  const languageContext = useLanguage();
+  const { language, changeLanguage } = languageContext;
+  // Defensive: ensure t is a function, fallback to simple key return
+  const t = typeof languageContext.t === "function" ? languageContext.t : (key) => key;
   const { user, logout, isAdmin } = useAuth();
   const { mode, toggleTheme } = useThemeMode();
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down("md"));

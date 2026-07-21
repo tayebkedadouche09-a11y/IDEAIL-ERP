@@ -57,10 +57,29 @@ export default function Search() {
     setLoading(true);
     try {
       const res = await api.get(`/search?query=${encodeURIComponent(query)}`);
-      setResults(res.data.results || {});
-      setTotal(res.data.total || 0);
+      // Ensure all arrays are safe with Array.isArray check
+      const rawResults = res.data?.results || {};
+      setResults({
+        clients: Array.isArray(rawResults.clients) ? rawResults.clients : [],
+        projects: Array.isArray(rawResults.projects) ? rawResults.projects : [],
+        invoices: Array.isArray(rawResults.invoices) ? rawResults.invoices : [],
+        payments: Array.isArray(rawResults.payments) ? rawResults.payments : [],
+        products: Array.isArray(rawResults.products) ? rawResults.products : [],
+        documents: Array.isArray(rawResults.documents) ? rawResults.documents : [],
+      });
+      setTotal(res.data?.total || 0);
     } catch (err) {
       console.log(err);
+      // Reset to empty arrays on error to prevent crashes
+      setResults({
+        clients: [],
+        projects: [],
+        invoices: [],
+        payments: [],
+        products: [],
+        documents: [],
+      });
+      setTotal(0);
     } finally {
       setLoading(false);
     }

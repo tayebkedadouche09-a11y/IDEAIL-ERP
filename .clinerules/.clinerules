@@ -1,0 +1,10 @@
+# IDEAIL ERP - PRESERVATION & COMPLETION RULES
+
+You must strictly build on top of the existing partial codebase. 
+DO NOT delete, overwrite, or destroy any functional features already built unless fixing a specific bug or replacing hardcoded text.
+
+CRITICAL INSTRUCTIONS:
+1. READ BEFORE CODING: Always check the implementation state in `client/` and `server/` before generating new code.
+2. CONTINUATION MODE: You are completing a project that is 50% done. Focus purely on filling gaps, resolving ⚠️ PARTIAL modules, and writing missing endpoints/pages.
+3. SINGLE SOURCE OF TRUTH: Follow `FINAL_DELIVERY_REPORT_2.md` precisely for all missing requirements.
+4. ZERO REGRESSION: Ensure that currently working features (like database tables or existing logins) remain entirely functional.

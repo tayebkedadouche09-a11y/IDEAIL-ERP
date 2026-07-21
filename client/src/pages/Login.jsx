@@ -14,10 +14,12 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 
 function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +38,7 @@ function Login() {
     setError("");
 
     if (!username.trim() || !password.trim()) {
-      setError("Please enter username and password");
+      setError(t("requiredField") || "Email and password are required");
       return;
     }
 
@@ -45,10 +47,21 @@ function Login() {
       await login(username.trim(), password);
       navigate("/");
     } catch (err) {
-      const message =
-        err.response?.data?.error ||
-        "Login failed. Please check your credentials.";
-      setError(message);
+      // Provide precise error messages
+      const serverError = err.response?.data?.error;
+      if (serverError) {
+        if (serverError.includes("Invalid username or password")) {
+          setError("Invalid Email or Password");
+        } else if (serverError.includes("disabled")) {
+          setError("Account is disabled. Contact administrator.");
+        } else {
+          setError(serverError);
+        }
+      } else if (err.code === 'NETWORK_ERROR' || !err.response) {
+        setError("Server Offline - Unable to connect to the server");
+      } else {
+        setError("An error occurred during login");
+      }
     } finally {
       setLoading(false);
     }
@@ -77,15 +90,15 @@ function Login() {
           {/* Logo / Title */}
           <Box sx={{ textAlign: "center", mb: 3 }}>
             <Typography variant="h4" fontWeight="bold" color="primary">
-              IDEAIL ERP
+              {t("enterpriseManagementSystem") || "IDEAIL ERP"}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              SARL IDEAIL ROUVETMON
+              {t("dashboard") || "Enterprise Management System"}
             </Typography>
           </Box>
 
           <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
-            Sign In
+            {t("login") || "Login"}
           </Typography>
 
           {error && (
@@ -97,7 +110,7 @@ function Login() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Username or Email"
+              label={t("email") || "Email"}
               variant="outlined"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -108,7 +121,7 @@ function Login() {
 
             <TextField
               fullWidth
-              label="Password"
+              label={t("password") || "Password"}
               type={showPassword ? "text" : "password"}
               variant="outlined"
               value={password}
@@ -140,7 +153,7 @@ function Login() {
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                "Login"
+                t("login") || "Login"
               )}
             </Button>
           </form>

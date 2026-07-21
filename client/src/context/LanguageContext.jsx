@@ -33,12 +33,18 @@ export function LanguageProvider({ children }) {
     }
   }, [language]);
 
+  // Translation function - looks up key in current language, falls back to key
+  function t(key) {
+    const currentTranslations = translations[language] || translations.fr;
+    return currentTranslations[key] || key;
+  }
+
   return (
     <LanguageContext.Provider
       value={{
         language,
         changeLanguage,
-        t: translations[language] || translations.fr
+        t
       }}
     >
       {children}

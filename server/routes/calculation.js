@@ -324,31 +324,6 @@ router.delete("/:id", (req, res) => {
 });
 
 // =======================================
-// GET /calculator/:systemId - Get system materials for calculator
-// =======================================
-router.get("/:systemId", async (req, res) => {
-  try {
-    const systemId = req.params.systemId;
-
-    // Check if it's a numeric ID (calculation) or system ID
-    if (isNaN(systemId)) {
-      return res.status(400).json({ error: "Invalid system ID" });
-    }
-
-    const materials = await calculateMaterialRequirement(systemId, 1);
-
-    res.json(materials.materials.map(m => ({
-      id: m.product_id,
-      name: m.product_name,
-      consumption: m.consumption_rate || m.quantity,
-      purchase_price: m.unit_price,
-    })));
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// =======================================
 // GET /calculation/system/:id/:surface - Calculate system materials
 // =======================================
 router.get("/system/:id/:surface", async (req, res) => {

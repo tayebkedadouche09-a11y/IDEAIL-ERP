@@ -286,9 +286,9 @@ export default function Vehicles() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder={t("searchVehicles")}
-        filters={[
+      filters={[
           { value: "all", label: t("allTypes") },
-          ...VEHICLE_TYPES.map(t => ({ value: t.value, label: t(t.key) || t.key })),
+          ...VEHICLE_TYPES.map((vt) => ({ value: vt.value, label: t(vt.key) || vt.key })),
         ]}
         filterValue={typeFilter}
         onFilterChange={setTypeFilter}
@@ -395,18 +395,18 @@ export default function Vehicles() {
             />
           </Box>
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <TextField
-              select
-              fullWidth
-              label={t("type")}
-              name="type"
-              value={form.type}
-              onChange={change}
-            >
-              {VEHICLE_TYPES.map((t) => (
-                <MenuItem key={t.value} value={t.value}>{t(t.key) || t.key}</MenuItem>
-              ))}
-            </TextField>
+          <TextField
+            select
+            fullWidth
+            label={t("type")}
+            name="type"
+            value={form.type}
+            onChange={change}
+          >
+            {VEHICLE_TYPES.map((vt) => (
+              <MenuItem key={vt.value} value={vt.value}>{t(vt.key) || vt.key}</MenuItem>
+            ))}
+          </TextField>
             <TextField
               fullWidth
               label={t("year")}

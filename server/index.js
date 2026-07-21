@@ -46,10 +46,6 @@ const { notificationService } = require("./services/notification");
 
 const app = express();
 
-// ======================
-// Middleware
-// ======================
-
 // CORS Configuration - restrict to frontend origin
 const corsOptions = {
   origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -62,7 +58,7 @@ app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
 
-// مشاركة مجلد الصور
+// Serve uploads directory
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
@@ -93,7 +89,7 @@ app.get("/health", (req, res) => {
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 requests per windowMs (increased from 5)
+  max: 50, // limit each IP to 50 requests per windowMs
   message: {
     error: "Too many authentication attempts, please try again later"
   },
@@ -218,6 +214,14 @@ app.listen(PORT, () => {
   console.log(
     `🚀 IDEAIL ERP Server running on http://localhost:${PORT}`
   );
+  console.log("==========================================");
+  console.log("✅ DEFAULT ADMIN CREDENTIALS");
+  console.log("==========================================");
+  console.log("📧 Email: admin@ideail.com");
+  console.log("🔑 Password: admin123");
+  console.log("==========================================");
+  console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
+  console.log("==========================================");
 });
 
 app.use((err, req, res, next) => {

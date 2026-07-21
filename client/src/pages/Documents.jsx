@@ -24,22 +24,23 @@ import EnterpriseTableToolbar from "../components/EnterpriseTableToolbar";
 import EnterpriseEmptyState from "../components/EnterpriseEmptyState";
 import StatusChip from "../components/StatusChip";
 import EnterpriseStatCard from "../components/EnterpriseStatCard";
+import { useLanguage } from "../context/LanguageContext";
 
 const DOCUMENT_CATEGORIES = [
-  { value: "projects", label: "Projects", icon: "📁" },
-  { value: "finance", label: "Finance", icon: "💰" },
-  { value: "hr", label: "HR", icon: "👥" },
-  { value: "company", label: "Company", icon: "🏢" },
+  { value: "projects", key: "projects", icon: "📁" },
+  { value: "finance", key: "finance", icon: "💰" },
+  { value: "hr", key: "hr", icon: "👥" },
+  { value: "company", key: "company", icon: "🏢" },
 ];
 
 const DOCUMENT_TYPES = [
-  { value: "photo", label: "Photo", icon: "🖼️" },
-  { value: "report", label: "Report", icon: "📊" },
-  { value: "technical", label: "Technical", icon: "🔧" },
-  { value: "invoice", label: "Invoice", icon: "🧾" },
-  { value: "quote", label: "Quote", icon: "📄" },
-  { value: "contract", label: "Contract", icon: "📋" },
-  { value: "certificate", label: "Certificate", icon: "📜" },
+  { value: "photo", key: "photo", icon: "🖼️" },
+  { value: "report", key: "report", icon: "📊" },
+  { value: "technical", key: "technical", icon: "🔧" },
+  { value: "invoice", key: "invoices", icon: "🧾" },
+  { value: "quote", key: "quotes", icon: "📄" },
+  { value: "contract", key: "contracts", icon: "📋" },
+  { value: "certificate", key: "certificates", icon: "📜" },
 ];
 
 const emptyForm = {
@@ -53,6 +54,8 @@ const emptyForm = {
 };
 
 export default function Documents() {
+  const { t } = useLanguage();
+  
   const [documents, setDocuments] = useState([]);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
@@ -84,7 +87,7 @@ export default function Documents() {
         api.get("/documents"),
         api.get("/projects"),
         api.get("/clients"),
-        api.get("/financial/suppliers"),
+        api.get("/suppliers"),
       ]);
       setDocuments(docsRes.data || []);
       setProjects(projectsRes.data || []);
@@ -134,7 +137,7 @@ export default function Documents() {
 
   async function save() {
     if (!file && !editId) {
-      setMessage({ type: "error", text: "Please select a file" });
+      setMessage({ type: "error", text: t("selectFileRequired") || "Please select a file" });
       return;
     }
 
@@ -149,10 +152,10 @@ export default function Documents() {
 
       if (editId) {
         await api.put(`/documents/${editId}`, data);
-        setMessage({ type: "success", text: "Document updated" });
+        setMessage({ type: "success", text: t("documentUpdated") || "Document updated" });
       } else {
         await api.post("/documents", data);
-        setMessage({ type: "success", text: "Document uploaded" });
+        setMessage({ type: "success", text: t("documentUploaded") || "Document uploaded" });
       }
       setOpen(false);
       setEditId(null);
@@ -160,7 +163,7 @@ export default function Documents() {
       setFile(null);
       loadData();
     } catch (err) {
-      setMessage({ type: "error", text: err.response?.data?.error || "Save failed" });
+      setMessage({ type: "error", text: err.response?.data?.error || t("saveFailed") || "Save failed" });
     }
     setTimeout(() => setMessage({ type: "", text: "" }), 3000);
   }
@@ -180,13 +183,13 @@ export default function Documents() {
   }
 
   async function remove(id) {
-    if (!window.confirm("Delete this document?")) return;
+    if (!window.confirm(t("deleteDocumentConfirm") || "Delete this document?")) return;
     try {
       await api.delete(`/documents/${id}`);
-      setMessage({ type: "success", text: "Document deleted" });
+      setMessage({ type: "success", text: t("documentDeleted") || "Document deleted" });
       loadData();
     } catch (err) {
-      setMessage({ type: "error", text: err.response?.data?.error || "Delete failed" });
+      setMessage({ type: "error", text: err.response?.data?.error || t("deleteFailed") || "Delete failed" });
     }
     setTimeout(() => setMessage({ type: "", text: "" }), 3000);
   }
@@ -214,9 +217,9 @@ export default function Documents() {
   return (
     <Box>
       <PageHeader
-        title="Documents Center"
-        subtitle="Manage company files, project documents and attachments"
-        actionLabel="Upload Document"
+        title={t("documents") || "Documents"}
+        subtitle={t("manageDocuments") || "Manage company files, project documents and attachments"}
+        actionLabel={t("uploadDocument") || "Upload Document"}
         onAction={addNew}
         icon="📁"
       />
@@ -227,40 +230,40 @@ export default function Documents() {
         </Alert>
       )}
 
-      <EnterpriseSection title="Statistics" sx={{ mb: 3 }}>
+      <EnterpriseSection title={t("statistics") || "Statistics"} sx={{ mb: 3 }}>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           <EnterpriseStatCard
-            title="Total Documents"
+            title={t("totalDocuments") || "Total Documents"}
             value={stats.total}
             color="primary"
             icon="📊"
           />
           <EnterpriseStatCard
-            title="Project Documents"
+            title={t("projectDocuments") || "Project Documents"}
             value={stats.projectDocs}
             color="info"
             icon="📁"
           />
           <EnterpriseStatCard
-            title="Invoice Documents"
+            title={t("invoiceDocuments") || "Invoice Documents"}
             value={stats.invoiceDocs}
             color="warning"
             icon="🧾"
           />
           <EnterpriseStatCard
-            title="Contract Documents"
+            title={t("contractDocuments") || "Contract Documents"}
             value={stats.contractDocs}
             color="success"
             icon="📋"
           />
           <EnterpriseStatCard
-            title="Storage Used"
+            title={t("storageUsed") || "Storage Used"}
             value={stats.storageUsed}
             color="default"
             icon="💾"
           />
           <EnterpriseStatCard
-            title="Recent Uploads"
+            title={t("recentUploads") || "Recent Uploads"}
             value={stats.recentUploads}
             color="error"
             icon="📤"
@@ -268,33 +271,26 @@ export default function Documents() {
         </Box>
       </EnterpriseSection>
 
-      <EnterpriseSection title="Document Categories" sx={{ mb: 3 }}>
+      <EnterpriseSection title={t("documentCategories") || "Document Categories"} sx={{ mb: 3 }}>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-          <EnterprisePanel title="Projects" sx={{ flex: 1, minWidth: 150 }}>
+          <EnterprisePanel title={t("projects") || "Projects"} sx={{ flex: 1, minWidth: 150 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Chip label="Photos" size="small" variant="outlined" />
-              <Chip label="Reports" size="small" variant="outlined" />
-              <Chip label="Technical Files" size="small" variant="outlined" />
+              <Chip label={t("photos") || "Photos"} size="small" variant="outlined" />
+              <Chip label={t("reports") || "Reports"} size="small" variant="outlined" />
+              <Chip label={t("technicalFiles") || "Technical Files"} size="small" variant="outlined" />
             </Box>
           </EnterprisePanel>
-          <EnterprisePanel title="Finance" sx={{ flex: 1, minWidth: 150 }}>
+          <EnterprisePanel title={t("finance") || "Finance"} sx={{ flex: 1, minWidth: 150 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Chip label="Invoices" size="small" variant="outlined" />
-              <Chip label="Quotes" size="small" variant="outlined" />
-              <Chip label="Payments" size="small" variant="outlined" />
+              <Chip label={t("invoices") || "Invoices"} size="small" variant="outlined" />
+              <Chip label={t("quotes") || "Quotes"} size="small" variant="outlined" />
+              <Chip label={t("payments") || "Payments"} size="small" variant="outlined" />
             </Box>
           </EnterprisePanel>
-          <EnterprisePanel title="HR" sx={{ flex: 1, minWidth: 150 }}>
+          <EnterprisePanel title={t("hr") || "HR"} sx={{ flex: 1, minWidth: 150 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Chip label="Employee Docs" size="small" variant="outlined" />
-              <Chip label="Contracts" size="small" variant="outlined" />
-            </Box>
-          </EnterprisePanel>
-          <EnterprisePanel title="Company" sx={{ flex: 1, minWidth: 150 }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Chip label="Registration" size="small" variant="outlined" />
-              <Chip label="Insurance" size="small" variant="outlined" />
-              <Chip label="Certificates" size="small" variant="outlined" />
+              <Chip label={t("employeeDocs") || "Employee Docs"} size="small" variant="outlined" />
+              <Chip label={t("contracts") || "Contracts"} size="small" variant="outlined" />
             </Box>
           </EnterprisePanel>
         </Box>
@@ -303,21 +299,21 @@ export default function Documents() {
       <EnterpriseTableToolbar
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search documents..."
+        searchPlaceholder={t("searchDocuments") || "Search documents..."}
         filters={[
-          { value: "all", label: "All Categories" },
-          ...DOCUMENT_CATEGORIES.map(c => ({ value: c.value, label: c.label })),
+          { value: "all", label: t("allCategories") || "All Categories" },
+          ...DOCUMENT_CATEGORIES.map((dc) => ({ value: dc.value, label: t(dc.key) || dc.label })),
         ]}
         filterValue={categoryFilter}
         onFilterChange={setCategoryFilter}
         onRefresh={loadData}
       />
 
-      <EnterpriseSection title="Documents List">
+      <EnterpriseSection title={t("documentsList") || "Documents List"}>
         {filteredDocuments.length === 0 ? (
           <EnterpriseEmptyState
-            message="No documents found"
-            actionLabel="Upload your first document"
+            message={t("noDocumentsFound") || "No documents found"}
+            actionLabel={t("uploadYourFirstDocument") || "Upload your first document"}
             onAction={addNew}
           />
         ) : (
@@ -325,16 +321,16 @@ export default function Documents() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Preview</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Name</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Category</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Related</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Type</th>
-                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>Size</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Date</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>By</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Status</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Actions</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("preview") || "Preview"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("name") || "Name"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("category") || "Category"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("related") || "Related"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("type") || "Type"}</th>
+                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>{t("size") || "Size"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("date") || "Date"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("by") || "By"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("status") || "Status"}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("actions") || "Actions"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -350,9 +346,9 @@ export default function Documents() {
                         {doc.name}
                       </Typography>
                     </td>
-                    <td style={{ padding: "12px" }}>{doc.category}</td>
+                    <td style={{ padding: "12px" }}>{t(doc.category) || doc.category}</td>
                     <td style={{ padding: "12px" }}>{doc.related_name || "-"}</td>
-                    <td style={{ padding: "12px" }}>{doc.type}</td>
+                    <td style={{ padding: "12px" }}>{t(doc.type) || doc.type}</td>
                     <td style={{ padding: "12px", textAlign: "right" }}>{formatSize(doc.size)}</td>
                     <td style={{ padding: "12px" }}>{doc.created_at?.slice(0, 10)}</td>
                     <td style={{ padding: "12px" }}>{doc.uploaded_by || "-"}</td>
@@ -361,17 +357,17 @@ export default function Documents() {
                     </td>
                     <td style={{ padding: "12px" }}>
                       <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <Tooltip title="View">
+                        <Tooltip title={t("view") || "View"}>
                           <IconButton size="small" color="primary" onClick={() => editDocument(doc)}>
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Download">
+                        <Tooltip title={t("download") || "Download"}>
                           <IconButton size="small" color="info">
                             <DownloadIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete">
+                        <Tooltip title={t("delete") || "Delete"}>
                           <IconButton size="small" color="error" onClick={() => remove(doc.id)}>
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -388,28 +384,28 @@ export default function Documents() {
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editId ? "Edit Document" : "Upload Document"}
+          {editId ? t("editDocument") || "Edit Document" : t("uploadDocument") || "Upload Document"}
         </DialogTitle>
         <DialogContent>
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            File Information
+            {t("fileInformation") || "File Information"}
           </Typography>
           <Button variant="outlined" component="label" fullWidth sx={{ mb: 2 }}>
-            {file ? file.name : "Select File"}
+            {file ? file.name : t("selectFile") || "Select File"}
             <input type="file" hidden onChange={handleFileChange} />
           </Button>
           <TextField
             select
             fullWidth
             margin="normal"
-            label="Category"
+            label={t("category") || "Category"}
             name="category"
             value={form.category}
             onChange={change}
           >
-            {DOCUMENT_CATEGORIES.map((c) => (
-              <MenuItem key={c.value} value={c.value}>
-                {c.icon} {c.label}
+            {DOCUMENT_CATEGORIES.map((dc) => (
+              <MenuItem key={dc.value} value={dc.value}>
+                {dc.icon} {t(dc.key) || dc.label}
               </MenuItem>
             ))}
           </TextField>
@@ -417,31 +413,31 @@ export default function Documents() {
             select
             fullWidth
             margin="normal"
-            label="Type"
+            label={t("type") || "Type"}
             name="type"
             value={form.type}
             onChange={change}
           >
-            {DOCUMENT_TYPES.map((t) => (
-              <MenuItem key={t.value} value={t.value}>
-                {t.icon} {t.label}
+            {DOCUMENT_TYPES.map((dt) => (
+              <MenuItem key={dt.value} value={dt.value}>
+                {dt.icon} {t(dt.key) || dt.label}
               </MenuItem>
             ))}
           </TextField>
 
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            Relation
+            {t("relation") || "Relation"}
           </Typography>
           <TextField
             select
             fullWidth
             margin="normal"
-            label="Related Project"
+            label={t("relatedProject") || "Related Project"}
             name="project_id"
             value={form.project_id}
             onChange={change}
           >
-            <MenuItem value="">-- None --</MenuItem>
+            <MenuItem value="">-- {t("none") || "None"} --</MenuItem>
             {projects.map((p) => (
               <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
             ))}
@@ -450,12 +446,12 @@ export default function Documents() {
             select
             fullWidth
             margin="normal"
-            label="Related Client"
+            label={t("relatedClient") || "Related Client"}
             name="client_id"
             value={form.client_id}
             onChange={change}
           >
-            <MenuItem value="">-- None --</MenuItem>
+            <MenuItem value="">-- {t("none") || "None"} --</MenuItem>
             {clients.map((c) => (
               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
             ))}
@@ -464,12 +460,12 @@ export default function Documents() {
             select
             fullWidth
             margin="normal"
-            label="Related Supplier"
+            label={t("relatedSupplier") || "Related Supplier"}
             name="supplier_id"
             value={form.supplier_id}
             onChange={change}
           >
-            <MenuItem value="">-- None --</MenuItem>
+            <MenuItem value="">-- {t("none") || "None"} --</MenuItem>
             {suppliers.map((s) => (
               <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
             ))}
@@ -478,7 +474,7 @@ export default function Documents() {
           <TextField
             fullWidth
             margin="normal"
-            label="Description"
+            label={t("description") || "Description"}
             name="description"
             value={form.description}
             onChange={change}
@@ -487,8 +483,8 @@ export default function Documents() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={save}>Save</Button>
+          <Button onClick={() => setOpen(false)}>{t("cancel") || "Cancel"}</Button>
+          <Button variant="contained" onClick={save}>{t("save") || "Save"}</Button>
         </DialogActions>
       </Dialog>
     </Box>

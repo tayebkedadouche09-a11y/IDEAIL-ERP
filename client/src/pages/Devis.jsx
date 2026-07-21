@@ -20,16 +20,18 @@ import EnterpriseTableToolbar from "../components/EnterpriseTableToolbar";
 import EnterpriseEmptyState from "../components/EnterpriseEmptyState";
 import StatusChip from "../components/StatusChip";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { useLanguage } from "../context/LanguageContext";
 
 const STATUS_CONFIG = {
-  brouillon: { label: "Draft", color: "default" },
-  envoyé: { label: "Sent", color: "info" },
-  accepté: { label: "Accepted", color: "success" },
-  refusé: { label: "Rejected", color: "error" },
-  converti: { label: "Converted", color: "secondary" },
+  brouillon: { key: "draft", color: "default" },
+  envoyé: { key: "sent", color: "info" },
+  accepté: { key: "accepted", color: "success" },
+  refusé: { key: "rejected", color: "error" },
+  converti: { key: "converted", color: "secondary" },
 };
 
 export default function Devis() {
+  const { t } = useLanguage();
   const [devisList, setDevisList] = useState([]);
   const [openForm, setOpenForm] = useState(false);
   const [editDevis, setEditDevis] = useState(null);
@@ -74,7 +76,7 @@ export default function Devis() {
       calculateStats(res.data.data || res.data);
     } catch (err) {
       console.log(err);
-      showSnackbar("Error loading devis", "error");
+      showSnackbar(t("errorLoadingDevis"), "error");
     } finally {
       setLoading(false);
     }
@@ -110,12 +112,12 @@ export default function Devis() {
       setOpenForm(true);
     } catch (err) {
       console.log(err);
-      showSnackbar("Error loading devis details", "error");
+      showSnackbar(t("errorLoadingDevis"), "error");
     }
   }
 
   function onSaved() {
-    showSnackbar("Devis saved successfully", "success");
+    showSnackbar(editDevis ? t("devisUpdatedSuccessfully") : t("devisCreatedSuccessfully"), "success");
     loadDevis();
   }
 
@@ -131,31 +133,31 @@ export default function Devis() {
       await api.delete(`/devis/${deleteId}`);
       setOpenDelete(false);
       setDeleteId(null);
-      showSnackbar("Devis deleted", "success");
+      showSnackbar(t("devisDeletedSuccessfully"), "success");
       loadDevis();
     } catch (err) {
-      showSnackbar(err.response?.data?.error || "Delete failed", "error");
+      showSnackbar(err.response?.data?.error || t("errorDeletingDevis"), "error");
     }
   }
 
   async function updateStatus(id, status) {
     try {
       await api.put(`/devis/${id}/status`, { status });
-      showSnackbar(`Status changed to '${status}'`, "success");
+      showSnackbar(t("updatedSuccessfully"), "success");
       loadDevis();
     } catch (err) {
-      showSnackbar(err.response?.data?.error || "Status change failed", "error");
+      showSnackbar(err.response?.data?.error || t("errorSavingDevis"), "error");
     }
   }
 
   async function convertToInvoice(id) {
-    if (!window.confirm("Convert this devis to an invoice?")) return;
+    if (!window.confirm(t("convertDevisToInvoice"))) return;
     try {
       const res = await api.post(`/devis/${id}/convert-to-invoice`);
-      showSnackbar(`Invoice ${res.data.invoice_number} created from devis`, "success");
+      showSnackbar(`${t("invoiceCreatedSuccessfully")}: ${res.data.invoice_number}`, "success");
       loadDevis();
     } catch (err) {
-      showSnackbar(err.response?.data?.error || "Conversion failed", "error");
+      showSnackbar(err.response?.data?.error || t("errorSavingDevis"), "error");
     }
   }
 
@@ -171,9 +173,9 @@ export default function Devis() {
   return (
     <Box>
       <PageHeader
-        title="Devis / Quotes"
-        subtitle="Manage quotations and proposals"
-        actionLabel="New Quote"
+        title={t("devis")}
+        subtitle={t("manageQuotations")}
+        actionLabel={t("add")}
         onAction={addNew}
         icon="📋"
       />
@@ -190,46 +192,46 @@ export default function Devis() {
         </Snackbar>
       )}
 
-      <EnterpriseSection title="Statistics" sx={{ mb: 3 }}>
+      <EnterpriseSection title={t("statisticsStat")} sx={{ mb: 3 }}>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           <EnterpriseStatCard
-            title="Total Quotes"
+            title={t("totalDevis")}
             value={stats.total}
             color="primary"
             icon="📊"
           />
           <EnterpriseStatCard
-            title="Draft"
+            title={t("draft")}
             value={stats.brouillon}
             color="default"
             icon="📄"
           />
           <EnterpriseStatCard
-            title="Sent"
+            title={t("sent")}
             value={stats.envoyé}
             color="info"
             icon="📤"
           />
           <EnterpriseStatCard
-            title="Accepted"
+            title={t("accepted")}
             value={stats.accepté}
             color="success"
             icon="✅"
           />
           <EnterpriseStatCard
-            title="Rejected"
+            title={t("rejected")}
             value={stats.refusé}
             color="error"
             icon="❌"
           />
           <EnterpriseStatCard
-            title="Converted"
+            title={t("converted")}
             value={stats.converti}
             color="secondary"
             icon="🔄"
           />
           <EnterpriseStatCard
-            title="Total Value"
+            title={t("totalValue")}
             value={`${stats.totalValue.toLocaleString()} DA`}
             color="primary"
             icon="💰"
@@ -240,25 +242,25 @@ export default function Devis() {
       <EnterpriseTableToolbar
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search quotes..."
+        searchPlaceholder={t("searchDevis")}
         filters={[
-          { value: "all", label: "All Status" },
-          { value: "brouillon", label: "Draft" },
-          { value: "envoyé", label: "Sent" },
-          { value: "accepté", label: "Accepted" },
-          { value: "refusé", label: "Rejected" },
-          { value: "converti", label: "Converted" },
+          { value: "all", label: t("allStatus") },
+          { value: "brouillon", label: t("draft") },
+          { value: "envoyé", label: t("sent") },
+          { value: "accepté", label: t("accepted") },
+          { value: "refusé", label: t("rejected") },
+          { value: "converti", label: t("converted") },
         ]}
         filterValue={statusFilter}
         onFilterChange={setStatusFilter}
         onRefresh={loadDevis}
       />
 
-      <EnterpriseSection title="Quotes List" loading={loading}>
+      <EnterpriseSection title={t("devisList")} loading={loading}>
         {filteredDevis.length === 0 ? (
           <EnterpriseEmptyState
-            message="No quotes found"
-            actionLabel="Create your first quote"
+            message={t("noDevisFound")}
+            actionLabel={t("createFirstDevis")}
             onAction={addNew}
           />
         ) : (
@@ -266,13 +268,13 @@ export default function Devis() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Quote Number</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Client</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Date</th>
-                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>Amount</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Status</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Valid Until</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Actions</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("devisNumber")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("client")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("date")}</th>
+                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>{t("amount")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("status")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("validUntil")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,14 +294,14 @@ export default function Devis() {
                           {d.amount?.toLocaleString()} DA
                         </Typography>
                       </td>
-                      <td style={{ padding: "12px" }}>
-                        <StatusChip status={d.status} />
+<td style={{ padding: "12px" }}>
+                        <StatusChip status={d.status} type="devis" />
                       </td>
                       <td style={{ padding: "12px" }}>{d.valid_until || "-"}</td>
                       <td style={{ padding: "12px" }}>
                         <Box sx={{ display: "flex", gap: 0.5 }}>
                           {(d.status === "brouillon" || d.status === "envoyé") && (
-                            <Tooltip title="Edit">
+                            <Tooltip title={t("edit")}>
                               <IconButton size="small" color="primary" onClick={() => editItem(d)}>
                                 <EditIcon fontSize="small" />
                               </IconButton>
@@ -307,7 +309,7 @@ export default function Devis() {
                           )}
 
                           {d.status === "brouillon" && (
-                            <Tooltip title="Send to client">
+                            <Tooltip title={t("send")}>
                               <IconButton size="small" color="info" onClick={() => updateStatus(d.id, "envoyé")}>
                                 <SendIcon fontSize="small" />
                               </IconButton>
@@ -316,12 +318,12 @@ export default function Devis() {
 
                           {d.status === "envoyé" && (
                             <>
-                              <Tooltip title="Accept">
+                              <Tooltip title={t("approveDevis")}>
                                 <IconButton size="small" color="success" onClick={() => updateStatus(d.id, "accepté")}>
                                   <AcceptIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
-                              <Tooltip title="Reject">
+                              <Tooltip title={t("rejectDevis")}>
                                 <IconButton size="small" color="error" onClick={() => updateStatus(d.id, "refusé")}>
                                   <RejectIcon fontSize="small" />
                                 </IconButton>
@@ -330,21 +332,21 @@ export default function Devis() {
                           )}
 
                           {d.status === "accepté" && (
-                            <Tooltip title="Convert to invoice">
+                            <Tooltip title={t("convertDevisToInvoice")}>
                               <IconButton size="small" color="secondary" onClick={() => convertToInvoice(d.id)}>
                                 <ConvertIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
 
-                          <Tooltip title="Download PDF">
+                          <Tooltip title={t("downloadPDF")}>
                             <IconButton size="small" onClick={() => window.open(`http://localhost:3000/pdf/devis/${d.id}`, "_blank")}>
                               <PdfIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
 
                           {d.status === "brouillon" && (
-                            <Tooltip title="Delete">
+                            <Tooltip title={t("delete")}>
                               <IconButton size="small" color="error" onClick={() => openDeleteDialog(d.id)}>
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -371,8 +373,8 @@ export default function Devis() {
                   setPage(1);
                 }}
                 rowsPerPageOptions={[10, 20, 50, 100]}
-                labelRowsPerPage="Rows per page"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+                labelRowsPerPage={t("rowsPerPage")}
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} ${t("of")} ${count}`}
               />
             )}
           </Box>
@@ -391,9 +393,9 @@ export default function Devis() {
         open={openDelete}
         onClose={() => setOpenDelete(false)}
         onConfirm={deleteDevis}
-        title="Delete Devis"
-        message="Are you sure you want to delete this devis? This action cannot be undone."
-        confirmText="Delete"
+        title={t("deleteDevis")}
+        message={t("confirmDeleteDevis")}
+        confirmText={t("delete")}
         type="error"
       />
     </Box>

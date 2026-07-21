@@ -8,19 +8,25 @@ const db = require("../database");
 
 // Get all events (optionally filtered by date range)
 router.get("/", (req, res) => {
-  const { start_date, end_date, type, project_id, client_id } = req.query;
+  const { start_date, end_date, type, project_id, client_id, page = 1, limit = 20, search = "", status } = req.query;
   
   let sql = `
     SELECT c.*, 
            p.name as project_name, 
-           cl.name as client_name
+           cl.name as client_name,
+           e.first_name || ' ' || e.last_name as employee_name
     FROM calendar_events c
     LEFT JOIN projects p ON c.project_id = p.id
     LEFT JOIN clients cl ON c.client_id = cl.id
+    LEFT JOIN employees e ON c.employee_id = e.id
     WHERE 1=1
   `;
   const params = [];
 
+  if (search) {
+    sql += " AND (c.title LIKE ? OR c.description LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
+  }
   if (start_date) {
     sql += " AND c.event_date >= ?";
     params.push(start_date);
@@ -41,12 +47,37 @@ router.get("/", (req, res) => {
     sql += " AND c.client_id = ?";
     params.push(client_id);
   }
+  if (status) {
+    sql += " AND c.status = ?";
+    params.push(status);
+  }
 
-  sql += " ORDER BY c.event_date ASC, c.start_time ASC";
+  const offset = (page - 1) * limit;
+  sql += " ORDER BY c.event_date ASC, c.start_time ASC LIMIT ? OFFSET ?";
+  params.push(parseInt(limit), offset);
 
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+    
+    // Get total count
+    const countSql = `SELECT COUNT(*) as total FROM calendar_events c WHERE 1=1 ${
+      search ? " AND (c.title LIKE ? OR c.description LIKE ?)" : ""
+    }`;
+    const countParams = search ? [`%${search}%`, `%${search}%`] : [];
+    
+    db.get(countSql, countParams, (err2, countRow) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      
+      res.json({
+        data: rows,
+        pagination: {
+          total: countRow.total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(countRow.total / limit),
+        }
+      });
+    });
   });
 });
 
@@ -216,6 +247,106 @@ router.get("/upcoming/list", (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
+});
+
+// =======================================
+// AUTOMATIC SYNC ENDPOINTS (Phase 7)
+// =======================================
+
+// Sync project deadlines to calendar events
+router.post("/sync/project-deadlines", (req, res) => {
+  db.all(
+    `SELECT id, name, expected_end_date, project_code FROM projects 
+     WHERE expected_end_date IS NOT NULL AND expected_end_date != '' 
+     AND status IN ('in_progress', 'on_hold', 'approved')`,
+    [],
+    (err, projects) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      let synced = 0;
+      projects.forEach((project) => {
+        // Check if deadline already exists
+        db.get(
+          "SELECT id FROM calendar_events WHERE project_id = ? AND type = 'project_deadline'",
+          [project.id],
+          (err2, existing) => {
+            if (err2 || existing) return;
+
+            const eventCode = "DLINE-" + project.id;
+            db.run(
+              `INSERT INTO calendar_events 
+               (event_code, title, description, event_date, type, project_id, status)
+               VALUES (?, ?, ?, ?, 'project_deadline', ?, 'planned')`,
+              [
+                eventCode,
+                `${project.project_code || ""} Deadline: ${project.name}`,
+                `Project deadline for ${project.name}`,
+                project.expected_end_date,
+                project.id
+              ],
+              (err3) => {
+                if (!err3) synced++;
+              }
+            );
+          }
+        );
+      });
+
+      setTimeout(() => {
+        res.json({ success: true, message: `Synced ${synced} project deadlines` });
+      }, 500);
+    }
+  );
+});
+
+// Sync payment due dates to calendar events
+router.post("/sync/payment-due-dates", (req, res) => {
+  db.all(
+    `SELECT id, invoice_number, client_id, due_date, remaining_amount 
+     FROM invoices 
+     WHERE due_date IS NOT NULL AND status != 'paid'`,
+    [],
+    (err, invoices) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      let synced = 0;
+      const today = new Date().toISOString().slice(0, 10);
+      
+      invoices.forEach((invoice) => {
+        if (invoice.due_date >= today) {
+          // Check if due date already exists
+          db.get(
+            "SELECT id FROM calendar_events WHERE invoice_reference = ?",
+            [invoice.invoice_number],
+            (err2, existing) => {
+              if (err2 || existing) return;
+
+              const eventCode = "PDUE-" + invoice.id;
+              db.run(
+                `INSERT INTO calendar_events 
+                 (event_code, title, description, event_date, type, client_id, status)
+                 VALUES (?, ?, ?, ?, 'payment_due', ?, 'planned')`,
+                [
+                  eventCode,
+                  `Payment Due: ${invoice.invoice_number}`,
+                  `Amount due: ${invoice.remaining_amount || invoice.amount} DA`,
+                  invoice.due_date,
+                  invoice.client_id
+                ],
+                (err3) => {
+                  if (!err3) synced++;
+                }
+              );
+            }
+          );
+        }
+      });
+
+      setTimeout(() => {
+        res.json({ success: true, message: `Synced ${synced} payment due dates` });
+      }, 500);
+    }
+  );
 });
 
 module.exports = router;

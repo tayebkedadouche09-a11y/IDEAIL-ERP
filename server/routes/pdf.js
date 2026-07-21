@@ -5,6 +5,49 @@ const path = require("path");
 const fs = require("fs");
 const db = require("../database");
 
+// Arabic font for RTL support
+const arabicFontPath = path.join(__dirname, "..", "fonts", "Amiri-Regular.ttf");
+const arabicBoldFontPath = path.join(__dirname, "..", "fonts", "Amiri-Bold.ttf");
+
+// Utility to detect if text is primarily Arabic
+function isArabicText(text) {
+  if (!text) return false;
+  const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+  return arabicRegex.test(text);
+}
+
+// Add text with RTL support for Arabic
+function addTextRTL(doc, text, options = {}) {
+  const arabic = isArabicText(text);
+  if (arabic) {
+    // For Arabic, try to use the Arabic font if available
+    try {
+      if (fs.existsSync(arabicFontPath)) {
+        doc.font(arabicFontPath);
+      }
+      // Reverse the text for RTL display in PDFKit
+      const reversedText = text.split("").reverse().join("");
+      doc.text(reversedText, { ...options, align: "right" });
+    } catch (e) {
+      doc.text(text, options);
+    }
+  } else {
+    doc.text(text, options);
+  }
+}
+
+// Create a simple PDF with mixed Arabic/English support
+function createPDFWithArabic(doc, title, clientInfo, items, total, language = "en") {
+  // Try to use Arabic font if available
+  try {
+    if (fs.existsSync(arabicFontPath)) {
+      doc.registerFont("Arabic", arabicFontPath);
+    }
+  } catch (e) {
+    console.log("Could not register Arabic font:", e.message);
+  }
+}
+
 // ===============================
 // إضافة رأس الشركة + اللوجو
 // ===============================
@@ -129,7 +172,8 @@ router.get("/invoice/:id", (req, res) => {
 
       const doc = new PDFDocument({
         size: "A4",
-        margin: 50
+        margin: 50,
+        font: arabicFontPath
       });
 
       res.setHeader(
@@ -144,77 +188,45 @@ router.get("/invoice/:id", (req, res) => {
 
       doc.pipe(res);
 
-      addCompanyHeader(doc, () => {
-        doc.fontSize(16)
-          .text(
-            "FACTURE / INVOICE",
-            {
-              align: "center"
-            }
-          );
+      // Set default font for Arabic support
+      try {
+        if (fs.existsSync(arabicFontPath)) {
+          doc.font(arabicFontPath);
+        }
+      } catch (e) {
+        console.log("Font loading error:", e);
+      }
 
+      addCompanyHeader(doc, () => {
+        doc.fontSize(16);
+        addTextRTL(doc, "FACTURE / INVOICE", { align: "center" });
         doc.moveDown();
 
         doc.fontSize(12);
 
-        doc.text(
-          `رقم الفاتورة: ${invoice.invoice_number}`
-        );
-
-        doc.text(
-          `التاريخ: ${invoice.invoice_date || ""}`
-        );
-
+        addTextRTL(doc, `Invoice #: ${invoice.invoice_number}`);
+        addTextRTL(doc, `Date: ${invoice.invoice_date || ""}`);
         doc.moveDown();
 
-        doc.text(
-          `العميل: ${invoice.client_name || "-"}`
-        );
-
-        doc.text(
-          `الهاتف: ${invoice.client_phone || "-"}`
-        );
-
-        doc.text(
-          `العنوان: ${invoice.client_address || "-"}`
-        );
-
+        addTextRTL(doc, `Client: ${invoice.client_name || "-"}`);
+        addTextRTL(doc, `Phone: ${invoice.client_phone || "-"}`);
+        addTextRTL(doc, `Address: ${invoice.client_address || "-"}`);
         doc.moveDown();
 
-        doc.text(
-          `المشروع: ${invoice.project_name || "-"}`
-        );
-
+        addTextRTL(doc, `Project: ${invoice.project_name || "-"}`);
         doc.moveDown();
 
-        doc.fontSize(14)
-          .text(
-            "تفاصيل الفاتورة"
-          );
-
+        doc.fontSize(14);
+        addTextRTL(doc, "Invoice Details / تفاصيل الفاتورة");
         doc.moveDown();
 
-        doc.fontSize(12)
-          .text(
-            `
-            المبلغ الإجمالي:
-            ${invoice.amount || 0} DA
-
-            الحالة:
-            ${invoice.status || ""}
-            `
-          );
-
+        doc.fontSize(12);
+        addTextRTL(doc, `Total Amount: ${invoice.amount || 0} DA`);
+        addTextRTL(doc, `Status: ${invoice.status || ""}`);
         doc.moveDown(2);
 
-        doc.text(
-          "شكراً لاختياركم IDEAIL"
-        );
-
-        doc.text(
-          "التوقيع: " +
-          (invoice.signature || "")
-        );
+        addTextRTL(doc, "شكراً لاختياركم IDEAIL - Thank you for choosing IDEAIL");
+        addTextRTL(doc, "التوقيع / Signature: ____________________");
 
         doc.end();
       });
@@ -269,7 +281,8 @@ router.get("/devis/:id", (req, res) => {
 
           const doc = new PDFDocument({
             size: "A4",
-            margin: 50
+            margin: 50,
+            font: arabicFontPath
           });
 
           res.setHeader(
@@ -284,79 +297,55 @@ router.get("/devis/:id", (req, res) => {
 
           doc.pipe(res);
 
-          addCompanyHeader(doc, () => {
-            doc.fontSize(16)
-              .text(
-                "DEVIS / عرض سعر",
-                {
-                  align: "center"
-                }
-              );
+          // Set default font for Arabic support
+          try {
+            if (fs.existsSync(arabicFontPath)) {
+              doc.font(arabicFontPath);
+            }
+          } catch (e) {
+            console.log("Font loading error:", e);
+          }
 
+          addCompanyHeader(doc, () => {
+            doc.fontSize(16);
+            addTextRTL(doc, "DEVIS / عرض سعر", { align: "center" });
             doc.moveDown();
 
             doc.fontSize(12);
 
-            doc.text(
-              `Client: ${devis.client_name || "-"}`
-            );
-
-            doc.text(
-              `Phone: ${devis.client_phone || "-"}`
-            );
-
-            doc.text(
-              `Address: ${devis.client_address || "-"}`
-            );
-
+            addTextRTL(doc, `Client: ${devis.client_name || "-"}`);
+            addTextRTL(doc, `Phone: ${devis.client_phone || "-"}`);
+            addTextRTL(doc, `Address: ${devis.client_address || "-"}`);
             doc.moveDown();
 
             if (devis.project_name) {
-              doc.text(
-                `Project: ${devis.project_name}`
-              );
+              addTextRTL(doc, `Project: ${devis.project_name}`);
             }
 
-            doc.text(
-              `Devis #: ${devis.devis_number || ""}`
-            );
-
-            doc.text(
-              `Date: ${devis.created_at || ""}`
-            );
-
+            addTextRTL(doc, `Devis #: ${devis.devis_number || ""}`);
+            addTextRTL(doc, `Date: ${devis.created_at || ""}`);
             doc.moveDown();
 
             // Items table
             doc.fontSize(14);
-            doc.text("Items:");
+            addTextRTL(doc, "Items / العناصر:");
             doc.moveDown();
 
             doc.fontSize(10);
             if (items && items.length > 0) {
               items.forEach((item) => {
-                doc.text(
-                  `${item.description} - Qty: ${item.quantity} - Price: ${item.unit_price} DA - Total: ${item.total_price} DA`
-                );
+                addTextRTL(doc, `${item.description} - Qty: ${item.quantity} - Price: ${item.unit_price} DA - Total: ${item.total_price} DA`);
               });
             }
 
             doc.moveDown();
 
             doc.fontSize(14);
-            doc.text(
-              `Total Amount: ${devis.amount || 0} DA`
-            );
-
+            addTextRTL(doc, `Total Amount: ${devis.amount || 0} DA`);
             doc.moveDown(2);
 
-            doc.text(
-              "This quotation is valid after client approval."
-            );
-
-            doc.text(
-              "Thank you for your business!"
-            );
+            addTextRTL(doc, "This quotation is valid after client approval.");
+            addTextRTL(doc, "Thank you for your business!");
 
             doc.end();
           });

@@ -87,16 +87,35 @@ export default function Reports() {
         api.get("/invoices"),
       ]);
       
+      // Ensure arrays are safe with Array.isArray check
+      const invoicesData = Array.isArray(invoicesRes.data) 
+        ? invoicesRes.data 
+        : (invoicesRes.data?.data || []);
+      
+      const projectsData = Array.isArray(projectsRes.data) 
+        ? projectsRes.data 
+        : (projectsRes.data?.data || []);
+      
       setStats({
-        totalRevenue: summaryRes.data.totalRevenue || 0,
-        totalExpenses: summaryRes.data.totalExpenses || 0,
-        netProfit: summaryRes.data.netProfit || 0,
-        activeProjects: projectsRes.data?.length || 0,
-        outstandingPayments: invoicesRes.data?.filter(i => i.status !== "مدفوعة").reduce((sum, i) => sum + (i.amount || 0), 0) || 0,
-        vatAmount: summaryRes.data.totalExpenses * 0.19 || 0,
+        totalRevenue: summaryRes.data?.totalRevenue || 0,
+        totalExpenses: summaryRes.data?.totalExpenses || 0,
+        netProfit: summaryRes.data?.netProfit || 0,
+        activeProjects: projectsData.length || 0,
+        outstandingPayments: Array.isArray(invoicesData) 
+          ? invoicesData.filter(i => i.status !== "مدفوعة" && i.status !== "paid").reduce((sum, i) => sum + (i.amount || 0), 0) || 0
+          : 0,
+        vatAmount: (summaryRes.data?.totalExpenses || 0) * 0.19 || 0,
       });
     } catch (err) {
       console.log(err);
+      setStats({
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        activeProjects: 0,
+        outstandingPayments: 0,
+        vatAmount: 0,
+      });
     }
   }
 
@@ -168,6 +187,7 @@ export default function Reports() {
       setMessage({ type: "success", text: "Report loaded" });
     } catch (err) {
       setMessage({ type: "error", text: err.response?.data?.error || "Failed to load report" });
+      setData(null);
     } finally {
       setLoading(false);
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
@@ -426,7 +446,7 @@ export default function Reports() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.items?.map((item, index) => (
+                      {Array.isArray(data.items) && data.items.map((item, index) => (
                         <tr key={index} style={{ borderBottom: "1px solid #e0e0e0" }}>
                           <td style={{ padding: "12px" }}>{item.category_name || "-"}</td>
                           <td style={{ padding: "12px", textAlign: "right" }}>{item.total_amount?.toLocaleString()} DA</td>
@@ -454,14 +474,14 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.length === 0 ? (
+                    {Array.isArray(data) && data.length === 0 ? (
                       <tr>
                         <td colSpan={7} style={{ textAlign: "center", padding: "12px" }}>
                           <Typography color="text.secondary">No projects found</Typography>
                         </td>
                       </tr>
                     ) : (
-                      data.map((p) => (
+                      Array.isArray(data) ? data.map((p) => (
                         <tr key={p.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
                           <td style={{ padding: "12px" }}>{p.name}</td>
                           <td style={{ padding: "12px" }}>{p.client_name}</td>
@@ -475,7 +495,7 @@ export default function Reports() {
                           </td>
                           <td style={{ padding: "12px", textAlign: "right" }}>{p.profit_margin}%</td>
                         </tr>
-                      ))
+                      )) : null
                     )}
                   </tbody>
                 </table>
@@ -485,7 +505,7 @@ export default function Reports() {
             {reportType === "monthly-revenue" && (
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data}>
+                  <LineChart data={Array.isArray(data) ? data : []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -510,7 +530,7 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items?.map((c) => (
+                    {Array.isArray(data?.items) && data.items.map((c) => (
                       <tr key={c.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
                         <td style={{ padding: "12px" }}>{c.name}</td>
                         <td style={{ padding: "12px" }}>{c.phone || "-"}</td>
@@ -537,7 +557,7 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items?.map((e) => (
+                    {Array.isArray(data?.items) && data.items.map((e) => (
                       <tr key={e.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
                         <td style={{ padding: "12px" }}>{e.name}</td>
                         <td style={{ padding: "12px" }}>{e.job_title || "-"}</td>
@@ -563,7 +583,7 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items?.map((v) => (
+                    {Array.isArray(data?.items) && data.items.map((v) => (
                       <tr key={v.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
                         <td style={{ padding: "12px" }}>{v.registration_number}</td>
                         <td style={{ padding: "12px" }}>{v.brand || "-"}</td>
@@ -611,7 +631,7 @@ export default function Reports() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.items?.map((p) => (
+                      {Array.isArray(data?.items) && data.items.map((p) => (
                         <tr key={p.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
                           <td style={{ padding: "12px" }}>{p.name}</td>
                           <td style={{ padding: "12px" }}>{p.category || "-"}</td>

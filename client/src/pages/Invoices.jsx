@@ -25,16 +25,18 @@ import EnterpriseTableToolbar from "../components/EnterpriseTableToolbar";
 import EnterpriseEmptyState from "../components/EnterpriseEmptyState";
 import StatusChip from "../components/StatusChip";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { useLanguage } from "../context/LanguageContext";
 
 const STATUS_CONFIG = {
-  Draft: { label: "Draft", color: "default" },
-  Issued: { label: "Issued", color: "info" },
-  "Partially Paid": { label: "Partially Paid", color: "warning" },
-  Paid: { label: "Paid", color: "success" },
-  Cancelled: { label: "Cancelled", color: "error" },
+  Draft: { key: "draft", color: "default" },
+  Issued: { key: "issued", color: "info" },
+  "Partially Paid": { key: "partially_paid", color: "warning" },
+  Paid: { key: "paid", color: "success" },
+  Cancelled: { key: "cancelled", color: "error" },
 };
 
 export default function Invoices() {
+  const { t } = useLanguage();
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -96,7 +98,7 @@ export default function Invoices() {
       calculateStats(res.data.data || res.data);
     } catch (error) {
       console.log(error);
-      showSnackbar("Error loading invoices", "error");
+      showSnackbar(t("errorLoadingInvoices"), "error");
     } finally {
       setLoading(false);
     }
@@ -242,13 +244,13 @@ export default function Invoices() {
 
   async function saveInvoice() {
     if (!form.client_id) {
-      showSnackbar("Please select a client", "error");
+      showSnackbar(t("clientRequired"), "error");
       return;
     }
 
     const validItems = form.items.filter((i) => i.description.trim());
     if (validItems.length === 0) {
-      showSnackbar("At least one item with a description is required", "error");
+      showSnackbar(t("atLeastOneDescriptionRequired"), "error");
       return;
     }
 
@@ -273,10 +275,10 @@ export default function Invoices() {
         await api.post("/invoices", payload);
       }
       setOpen(false);
-      showSnackbar("Invoice saved successfully", "success");
+      showSnackbar(t("invoiceSavedSuccessfully"), "success");
       loadInvoices();
     } catch (error) {
-      showSnackbar(error.response?.data?.error || "Failed to save invoice", "error");
+      showSnackbar(error.response?.data?.error || t("errorSavingInvoice"), "error");
     }
   }
 
@@ -292,10 +294,10 @@ export default function Invoices() {
       await api.delete(`/invoices/${deleteId}`);
       setOpenDelete(false);
       setDeleteId(null);
-      showSnackbar("Invoice deleted", "success");
+      showSnackbar(t("invoiceDeletedSuccessfully"), "success");
       loadInvoices();
     } catch (error) {
-      showSnackbar(error.response?.data?.error || "Delete failed", "error");
+      showSnackbar(error.response?.data?.error || t("errorDeletingInvoice"), "error");
     }
   }
 
@@ -304,7 +306,7 @@ export default function Invoices() {
     if (!invoice) return;
 
     const remaining = (invoice.amount || 0) - (invoice.paid_amount || 0);
-    const paymentAmount = prompt(`Enter payment amount (remaining: ${remaining} DA):`, remaining);
+    const paymentAmount = prompt(`${t("enterPaymentAmount")} (${t("remainingLabel")}: ${remaining} DA):`, remaining);
 
     if (!paymentAmount || isNaN(paymentAmount)) return;
 
@@ -315,10 +317,10 @@ export default function Invoices() {
         amount: Number(paymentAmount),
         payment_date: new Date().toISOString().slice(0, 10),
       });
-      showSnackbar("Payment registered", "success");
+      showSnackbar(t("paymentRegisteredSuccessfully"), "success");
       loadInvoices();
     } catch (error) {
-      showSnackbar(error.response?.data?.error || "Payment failed", "error");
+      showSnackbar(error.response?.data?.error || t("paymentFailed"), "error");
     }
   }
 
@@ -333,9 +335,9 @@ export default function Invoices() {
   return (
     <Box>
       <PageHeader
-        title="Invoices"
-        subtitle="Manage invoices and payments"
-        actionLabel="New Invoice"
+        title={t("invoices")}
+        subtitle={t("manageInvoices")}
+        actionLabel={t("add")}
         onAction={addNew}
         icon="🧾"
       />
@@ -352,40 +354,40 @@ export default function Invoices() {
         </Snackbar>
       )}
 
-      <EnterpriseSection title="Statistics" sx={{ mb: 3 }}>
+      <EnterpriseSection title={t("statisticsStat")} sx={{ mb: 3 }}>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           <EnterpriseStatCard
-            title="Total"
+            title={t("total")}
             value={stats.total}
             color="primary"
             icon="📊"
           />
           <EnterpriseStatCard
-            title="Paid"
+            title={t("paid")}
             value={stats.paid}
             color="success"
             icon="✅"
           />
           <EnterpriseStatCard
-            title="Unpaid"
+            title={t("unpaid")}
             value={stats.unpaid}
             color="warning"
             icon="⏳"
           />
           <EnterpriseStatCard
-            title="Overdue"
+            title={t("overdue")}
             value={stats.overdue}
             color="error"
             icon="⚠️"
           />
           <EnterpriseStatCard
-            title="Revenue"
+            title={t("revenue")}
             value={`${stats.revenue.toLocaleString()} DA`}
             color="primary"
             icon="💰"
           />
           <EnterpriseStatCard
-            title="VAT"
+            title={t("vat")}
             value={`${stats.vat.toLocaleString()} DA`}
             color="info"
             icon="📈"
@@ -396,25 +398,25 @@ export default function Invoices() {
       <EnterpriseTableToolbar
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search invoices..."
+        searchPlaceholder={t("searchInvoices")}
         filters={[
-          { value: "all", label: "All Status" },
-          { value: "Draft", label: "Draft" },
-          { value: "Issued", label: "Issued" },
-          { value: "Partially Paid", label: "Partially Paid" },
-          { value: "Paid", label: "Paid" },
-          { value: "Cancelled", label: "Cancelled" },
+          { value: "all", label: t("allStatus") },
+          { value: "Draft", label: t("draft") },
+          { value: "Issued", label: t("issued") },
+          { value: "Partially Paid", label: t("partially_paid") },
+          { value: "Paid", label: t("paid") },
+          { value: "Cancelled", label: t("cancelled") },
         ]}
         filterValue={filter}
         onFilterChange={setFilter}
         onRefresh={loadInvoices}
       />
 
-      <EnterpriseSection title="Invoices List" loading={loading}>
+      <EnterpriseSection title={t("invoiceList")} loading={loading}>
         {filteredInvoices.length === 0 ? (
           <EnterpriseEmptyState
-            message="No invoices found"
-            actionLabel="Create your first invoice"
+            message={t("noInvoicesFound")}
+            actionLabel={t("createFirstInvoice")}
             onAction={addNew}
           />
         ) : (
@@ -422,15 +424,15 @@ export default function Invoices() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Invoice No</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Client</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Project</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Issue Date</th>
-                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>Amount</th>
-                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>Paid</th>
-                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>Remaining</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Status</th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>Actions</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("invoiceNumber")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("client")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("project")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("invoiceDate")}</th>
+                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>{t("amount")}</th>
+                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>{t("paidAmount")}</th>
+                  <th style={{ textAlign: "right", padding: "12px", fontWeight: "bold" }}>{t("remainingAmount")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("status")}</th>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: "bold" }}>{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -459,13 +461,13 @@ export default function Invoices() {
                           {remaining.toLocaleString()} DA
                         </Typography>
                       </td>
-                      <td style={{ padding: "12px" }}>
-                        <StatusChip status={inv.status} />
+<td style={{ padding: "12px" }}>
+                        <StatusChip status={inv.status} type="invoice" />
                       </td>
                       <td style={{ padding: "12px" }}>
                         <Box sx={{ display: "flex", gap: 0.5 }}>
                           {(inv.status === "Draft" || inv.status === "Issued" || inv.status === "Partially Paid") && (
-                            <Tooltip title="Edit">
+                            <Tooltip title={t("edit")}>
                               <IconButton size="small" color="primary" onClick={() => editInvoice(inv)}>
                                 <EditIcon fontSize="small" />
                               </IconButton>
@@ -473,7 +475,7 @@ export default function Invoices() {
                           )}
 
                           {inv.status === "Draft" && (
-                            <Tooltip title="Issue">
+                            <Tooltip title={t("issue")}>
                               <IconButton size="small" color="info" onClick={() => api.put(`/invoices/${inv.id}/status`, { status: "Issued" }).then(() => loadInvoices())}>
                                 <SendIcon fontSize="small" />
                               </IconButton>
@@ -481,21 +483,21 @@ export default function Invoices() {
                           )}
 
                           {inv.status !== "Paid" && inv.status !== "Cancelled" && (
-                            <Tooltip title="Register Payment">
+                            <Tooltip title={t("registerPayment")}>
                               <IconButton size="small" color="success" onClick={() => registerPayment(inv.id)}>
                                 <PaymentIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
 
-                          <Tooltip title="Print PDF">
+                          <Tooltip title={t("printPDF")}>
                             <IconButton size="small" onClick={() => window.open(`http://localhost:3000/pdf/invoice/${inv.id}`, "_blank")}>
                               <PdfIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
 
                           {inv.status === "Draft" && (
-                            <Tooltip title="Delete">
+                            <Tooltip title={t("delete")}>
                               <IconButton size="small" color="error" onClick={() => openDeleteDialog(inv.id)}>
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -522,8 +524,8 @@ export default function Invoices() {
                   setPage(1);
                 }}
                 rowsPerPageOptions={[10, 20, 50, 100]}
-                labelRowsPerPage="Rows per page"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+                labelRowsPerPage={t("rowsPerPage")}
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} ${t("of")} ${count}`}
               />
             )}
           </Box>
@@ -532,7 +534,7 @@ export default function Invoices() {
 
       {/* Create from Quotation Section */}
       {quotations.length > 0 && (
-        <EnterpriseSection title="Create from Accepted Quotations" sx={{ mt: 3 }}>
+        <EnterpriseSection title={t("createFromQuotation")} sx={{ mt: 3 }}>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             {quotations.map((q) => (
               <Button
@@ -551,18 +553,19 @@ export default function Invoices() {
       {/* Invoice Form Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editId ? "Edit Invoice" : "New Invoice"}
+          {editId ? t("editInvoice") : t("addInvoice")}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", gap: 2, mb: 2, mt: 1 }}>
             <TextField
               select
               fullWidth
-              label="Client *"
+              label={t("client")}
               name="client_id"
               value={form.client_id}
               onChange={handleFormChange}
               disabled={!!editId}
+              required
             >
               {clients.map((c) => (
                 <MenuItem key={c.id} value={c.id}>
@@ -574,12 +577,12 @@ export default function Invoices() {
             <TextField
               select
               fullWidth
-              label="Project (optional)"
+              label={t("project")}
               name="project_id"
               value={form.project_id}
               onChange={handleFormChange}
             >
-              <MenuItem value="">-- None --</MenuItem>
+              <MenuItem value="">{t("none")}</MenuItem>
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
                   {p.name}
@@ -591,7 +594,7 @@ export default function Invoices() {
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
             <TextField
               fullWidth
-              label="VAT Amount (DA)"
+              label={t("vatAmount")}
               name="vat_amount"
               type="number"
               value={form.vat_amount}
@@ -599,7 +602,7 @@ export default function Invoices() {
             />
             <TextField
               fullWidth
-              label="Discount (DA)"
+              label={t("discount")}
               name="discount"
               type="number"
               value={form.discount}
@@ -611,23 +614,23 @@ export default function Invoices() {
             select
             fullWidth
             margin="normal"
-            label="Status"
+            label={t("status")}
             name="status"
             value={form.status}
             onChange={handleFormChange}
           >
-            <MenuItem value="Draft">Draft</MenuItem>
-            <MenuItem value="Issued">Issued</MenuItem>
-            <MenuItem value="Partially Paid">Partially Paid</MenuItem>
-            <MenuItem value="Paid">Paid</MenuItem>
-            <MenuItem value="Cancelled">Cancelled</MenuItem>
+            <MenuItem value="Draft">{t("draft")}</MenuItem>
+            <MenuItem value="Issued">{t("issued")}</MenuItem>
+            <MenuItem value="Partially Paid">{t("partially_paid")}</MenuItem>
+            <MenuItem value="Paid">{t("paid")}</MenuItem>
+            <MenuItem value="Cancelled">{t("cancelled")}</MenuItem>
           </TextField>
 
           <TextField
             fullWidth
             margin="normal"
             type="date"
-            label="Invoice Date"
+            label={t("invoiceDate")}
             name="invoice_date"
             InputLabelProps={{ shrink: true }}
             value={form.invoice_date}
@@ -636,16 +639,16 @@ export default function Invoices() {
 
           {/* Items Table */}
           <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2, mb: 1 }}>
-            Items
+            {t("items")}
           </Typography>
 
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: "8px", fontWeight: "bold" }}>Description</th>
-                <th style={{ textAlign: "right", padding: "8px", fontWeight: "bold" }}>Qty</th>
-                <th style={{ textAlign: "right", padding: "8px", fontWeight: "bold" }}>Price (DA)</th>
-                <th style={{ textAlign: "right", padding: "8px", fontWeight: "bold" }}>Total (DA)</th>
+                <th style={{ textAlign: "left", padding: "8px", fontWeight: "bold" }}>{t("description")}</th>
+                <th style={{ textAlign: "right", padding: "8px", fontWeight: "bold" }}>{t("quantity")}</th>
+                <th style={{ textAlign: "right", padding: "8px", fontWeight: "bold" }}>{t("unitPrice")}</th>
+                <th style={{ textAlign: "right", padding: "8px", fontWeight: "bold" }}>{t("total")}</th>
                 <th style={{ width: 40 }}></th>
               </tr>
             </thead>
@@ -656,7 +659,7 @@ export default function Invoices() {
                     <TextField
                       fullWidth
                       size="small"
-                      placeholder="Item description"
+                      placeholder={t("description")}
                       value={item.description}
                       onChange={(e) => handleItemChange(index, "description", e.target.value)}
                     />
@@ -707,7 +710,7 @@ export default function Invoices() {
             size="small"
             sx={{ mt: 1 }}
           >
-            Add Item
+            {t("add")}
           </Button>
 
           {/* Total */}
@@ -722,7 +725,7 @@ export default function Invoices() {
             }}
           >
             <Typography variant="h6" fontWeight="bold">
-              Total: {calculateTotal().toLocaleString()} DA
+              {t("total")}: {calculateTotal().toLocaleString()} DA
             </Typography>
           </Box>
 
@@ -730,7 +733,7 @@ export default function Invoices() {
             fullWidth
             multiline
             rows={2}
-            label="Notes"
+            label={t("notes")}
             name="notes"
             value={form.notes}
             onChange={handleFormChange}
@@ -738,9 +741,9 @@ export default function Invoices() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={() => setOpen(false)}>{t("cancel")}</Button>
           <Button variant="contained" onClick={saveInvoice}>
-            {editId ? "Update" : "Create"}
+            {editId ? t("edit") : t("add")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -750,9 +753,9 @@ export default function Invoices() {
         open={openDelete}
         onClose={() => setOpenDelete(false)}
         onConfirm={deleteInvoice}
-        title="Delete Invoice"
-        message="Are you sure you want to delete this invoice? This action cannot be undone."
-        confirmText="Delete"
+        title={t("deleteInvoice")}
+        message={t("confirmDeleteInvoice")}
+        confirmText={t("delete")}
         type="error"
       />
     </Box>
