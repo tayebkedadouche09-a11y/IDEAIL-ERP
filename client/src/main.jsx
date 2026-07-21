@@ -1,12 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { ThemeProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
-
-import theme from "./theme/theme";
-
+import { ThemeModeProvider } from "./context/ThemeContext";
 import { LanguageProvider } from "./context/LanguageContext";
+import { AuthProvider } from "./context/AuthContext";
 
 import "./index.css";
 import App from "./App.jsx";
@@ -16,17 +13,19 @@ createRoot(document.getElementById("root")).render(
 
   <StrictMode>
 
-    <ThemeProvider theme={theme}>
-
-      <CssBaseline />
+    <ThemeModeProvider>
 
       <LanguageProvider>
 
-        <App />
+        <AuthProvider>
+
+          <App />
+
+        </AuthProvider>
 
       </LanguageProvider>
 
-    </ThemeProvider>
+    </ThemeModeProvider>
 
   </StrictMode>
 

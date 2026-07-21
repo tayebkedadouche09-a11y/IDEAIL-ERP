@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const db = require("../database");
+const { refreshProjectProfitability } = require("../controllers/profitability");
+const { eventBus } = require("../services/events");
 
 
 
@@ -216,13 +218,38 @@ error:err.message
 
 
 
+refreshProjectProfitability(db, project_id, (profitErr, summary) => {
+
+if(profitErr){
+
+return res.status(500).json({
+
+error:profitErr.message
+
+});
+
+}
+
+// Emit MaterialAdded event
+eventBus.emit("MaterialAdded", { 
+  materialId: this.lastID, 
+  projectId: project_id,
+  productId: product_id,
+  quantity: quantity,
+  totalCost: total_cost
+}, db);
+
 res.json({
 
 success:true,
 
 id:this.lastID,
 
-total_cost
+total_cost,
+
+profitability:summary
+
+});
 
 });
 
@@ -256,6 +283,35 @@ total_cost
 router.delete("/:id",(req,res)=>{
 
 
+db.get(
+
+`SELECT project_id FROM project_materials WHERE id=?`,
+
+[req.params.id],
+
+(err,material)=>{
+
+if(err){
+
+return res.status(500).json({
+
+error:err.message
+
+});
+
+}
+
+if(!material){
+
+return res.status(404).json({
+
+error:"المادة غير موجودة"
+
+});
+
+}
+
+
 db.run(
 
 `
@@ -268,35 +324,49 @@ WHERE id=?
 
 [req.params.id],
 
-function(err){
+function(deleteErr){
 
-
-if(err){
+if(deleteErr){
 
 return res.status(500).json({
 
-error:err.message
+error:deleteErr.message
 
 });
 
 }
 
+refreshProjectProfitability(db, material.project_id, (profitErr, summary) => {
 
+if(profitErr){
+
+return res.status(500).json({
+
+error:profitErr.message
+
+});
+
+}
 
 res.json({
 
-success:true
+success:true,
+
+profitability:summary
 
 });
 
-
 });
 
+}
+
+);
+
+}
+
+);
+
 
 });
-
-
-
-
 
 module.exports = router;

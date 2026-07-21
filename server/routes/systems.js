@@ -35,14 +35,21 @@ router.get("/", (req, res) => {
 // إضافة نظام جديد
 router.post("/", (req, res) => {
 
-  const {
+const {
     name,
     type,
-    resin_consumption,
-    hardener_ratio,
-    primer_consumption,
-    sand_consumption,
-    drying_time,
+    category,
+    sector,
+    description,
+    components,
+    layers,
+    consumption,
+    specifications,
+    material_cost,
+    labor_cost,
+    other_costs,
+    selling_price,
+    status,
     notes
   } = req.body;
 

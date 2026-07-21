@@ -3,13 +3,13 @@ import {
   Toolbar,
   Typography,
   Box,
-  IconButton,
   Avatar,
+  IconButton,
 } from "@mui/material";
 
 import LightModeIcon from "@mui/icons-material/LightMode";
 import LanguageIcon from "@mui/icons-material/Language";
-import NotificationsIcon from "@mui/icons-material/Notifications";
+import Notifications from "./Notifications";
 
 export default function Topbar() {
   return (
@@ -42,9 +42,7 @@ export default function Topbar() {
             <LightModeIcon />
           </IconButton>
 
-          <IconButton color="inherit">
-            <NotificationsIcon />
-          </IconButton>
+          <Notifications />
 
           <Avatar
             sx={{
