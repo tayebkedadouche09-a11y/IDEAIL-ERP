@@ -103,23 +103,43 @@ export default function Vehicles() {
         api.get("/employees"),
         api.get("/projects"),
       ]);
-      setVehicles(vehiclesRes.data || []);
-      setDrivers(driversRes.data || []);
-      setProjects(projectsRes.data || []);
-      calculateStats(vehiclesRes.data || []);
+      const vehiclesData = Array.isArray(vehiclesRes.data)
+        ? vehiclesRes.data
+        : Array.isArray(vehiclesRes.data?.data)
+          ? vehiclesRes.data.data
+          : [];
+      const driversData = Array.isArray(driversRes.data)
+        ? driversRes.data
+        : Array.isArray(driversRes.data?.data)
+          ? driversRes.data.data
+          : [];
+      const projectsData = Array.isArray(projectsRes.data)
+        ? projectsRes.data
+        : Array.isArray(projectsRes.data?.data)
+          ? projectsRes.data.data
+          : [];
+      setVehicles(vehiclesData);
+      setDrivers(driversData);
+      setProjects(projectsData);
+      calculateStats(vehiclesData);
     } catch (err) {
-      console.log(err);
+      setVehicles([]);
+      setDrivers([]);
+      setProjects([]);
+      calculateStats([]);
+      setMessage({ type: "error", text: err.response?.data?.error || t("loadFailed") });
     }
   }
 
   function calculateStats(data) {
+    const safeData = Array.isArray(data) ? data : [];
     const newStats = {
-      total: data.length,
-      active: data.filter(v => v.status === "in_use").length,
-      available: data.filter(v => v.status === "available").length,
-      monthlyFuel: data.reduce((sum, v) => sum + (v.fuel_budget || 0), 0),
-      maintenance: data.reduce((sum, v) => sum + (v.maintenance_cost || 0), 0),
-      insurance: data.reduce((sum, v) => sum + (v.insurance_cost || 0), 0),
+      total: safeData.length,
+      active: safeData.filter((v) => v.status === "in_use").length,
+      available: safeData.filter((v) => v.status === "available").length,
+      monthlyFuel: safeData.reduce((sum, v) => sum + (v.fuel_budget || 0), 0),
+      maintenance: safeData.reduce((sum, v) => sum + (v.maintenance_cost || 0), 0),
+      insurance: safeData.reduce((sum, v) => sum + (v.insurance_cost || 0), 0),
     };
     setStats(newStats);
   }
@@ -196,7 +216,8 @@ export default function Vehicles() {
     setTimeout(() => setMessage({ type: "", text: "" }), 3000);
   }
 
-  const filteredVehicles = vehicles
+  const safeVehicles = Array.isArray(vehicles) ? vehicles : [];
+  const filteredVehicles = safeVehicles
     .filter((v) => typeFilter === "all" || v.type === typeFilter)
     .filter((v) => statusFilter === "all" || v.status === statusFilter)
     .filter((v) =>
@@ -271,12 +292,12 @@ export default function Vehicles() {
           </EnterprisePanel>
           <EnterprisePanel title={t("maintenance")} sx={{ flex: 1, minWidth: 150 }}>
             <Typography variant="h4" color="warning.main" fontWeight="bold">
-              {vehicles.filter(v => v.status === "maintenance").length}
+              {safeVehicles.filter((v) => v.status === "maintenance").length}
             </Typography>
           </EnterprisePanel>
           <EnterprisePanel title={t("outOfService")} sx={{ flex: 1, minWidth: 150 }}>
             <Typography variant="h4" color="error.main" fontWeight="bold">
-              {vehicles.filter(v => v.status === "out_of_service").length}
+              {safeVehicles.filter((v) => v.status === "out_of_service").length}
             </Typography>
           </EnterprisePanel>
         </Box>
@@ -438,7 +459,7 @@ export default function Vehicles() {
             onChange={change}
           >
             <MenuItem value="">{t("none")}</MenuItem>
-            {drivers.map((d) => (
+            {(Array.isArray(drivers) ? drivers : []).map((d) => (
               <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
             ))}
           </TextField>
@@ -460,7 +481,7 @@ export default function Vehicles() {
             onChange={change}
           >
             <MenuItem value="">{t("none")}</MenuItem>
-            {projects.map((p) => (
+            {(Array.isArray(projects) ? projects : []).map((p) => (
               <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
             ))}
           </TextField>

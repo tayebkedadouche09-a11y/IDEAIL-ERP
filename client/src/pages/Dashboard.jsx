@@ -57,12 +57,24 @@ async function loadDashboard() {
         ...summaryRes.data,
         ...statsRes.data,
       });
-      setRevenueData(revenueRes.data || []);
-      setProfitData(profitRes.data || []);
+      const revenueData = Array.isArray(revenueRes.data)
+        ? revenueRes.data
+        : Array.isArray(revenueRes.data?.data)
+          ? revenueRes.data.data
+          : [];
+      const profitData = Array.isArray(profitRes.data)
+        ? profitRes.data
+        : Array.isArray(profitRes.data?.data)
+          ? profitRes.data.data
+          : [];
+      setRevenueData(revenueData);
+      setProfitData(profitData);
       setLastSync(new Date());
     } catch (err) {
-      console.log(err);
       setError("Failed to load dashboard data");
+      setSummary(null);
+      setRevenueData([]);
+      setProfitData([]);
     } finally {
       setLoading(false);
     }

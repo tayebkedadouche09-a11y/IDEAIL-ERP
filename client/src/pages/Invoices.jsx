@@ -95,7 +95,7 @@ export default function Invoices() {
         setTotal(res.data.pagination?.total || 0);
         setTotalPages(res.data.pagination?.totalPages || 1);
       }
-      calculateStats(res.data.data || res.data);
+      calculateStats(res.data?.data || res.data || []);
     } catch (error) {
       console.log(error);
       showSnackbar(t("errorLoadingInvoices"), "error");
@@ -109,15 +109,15 @@ export default function Invoices() {
   }
 
   function calculateStats(data) {
-    const invoiceData = Array.isArray(data) ? data : (data || []);
+    const invoiceData = Array.isArray(data) ? data.filter(Boolean) : [];
     const today = new Date().toISOString().slice(0, 10);
     const newStats = {
       total: invoiceData.length,
-      paid: invoiceData.filter(d => d.status === "Paid").length,
-      unpaid: invoiceData.filter(d => d.status === "Draft" || d.status === "Issued" || d.status === "Partially Paid").length,
-      overdue: invoiceData.filter(d => d.status !== "Paid" && d.invoice_date < today).length,
-      revenue: invoiceData.reduce((sum, d) => sum + (d.amount || 0), 0),
-      vat: invoiceData.reduce((sum, d) => sum + (d.vat_amount || 0), 0),
+      paid: invoiceData.filter(d => d?.status === "Paid").length,
+      unpaid: invoiceData.filter(d => ["Draft", "Issued", "Partially Paid"].includes(d?.status)).length,
+      overdue: invoiceData.filter(d => d?.status !== "Paid" && (d?.invoice_date || "") < today).length,
+      revenue: invoiceData.reduce((sum, d) => sum + (Number(d?.amount) || 0), 0),
+      vat: invoiceData.reduce((sum, d) => sum + (Number(d?.vat_amount) || 0), 0),
     };
     setStats(newStats);
   }
@@ -125,7 +125,7 @@ export default function Invoices() {
   async function loadClients() {
     try {
       const res = await api.get("/clients");
-      setClients(res.data);
+      setClients(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (error) {
       console.log(error);
     }
@@ -134,7 +134,7 @@ export default function Invoices() {
   async function loadProjects() {
     try {
       const res = await api.get("/projects");
-      setProjects(res.data);
+      setProjects(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (error) {
       console.log(error);
     }
@@ -324,12 +324,13 @@ export default function Invoices() {
     }
   }
 
-  const filteredInvoices = invoices
-    .filter(inv => filter === "all" || inv.status === filter)
+  const filteredInvoices = (Array.isArray(invoices) ? invoices : [])
+    .filter(Boolean)
+    .filter(inv => filter === "all" || inv?.status === filter)
     .filter(inv =>
       searchTerm === "" ||
-      inv.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      inv?.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv?.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   return (
@@ -437,24 +438,26 @@ export default function Invoices() {
               </thead>
               <tbody>
                 {filteredInvoices.map((inv) => {
-                  const remaining = (inv.amount || 0) - (inv.paid_amount || 0);
+                  const amount = Number(inv?.amount) || 0;
+                  const paidAmount = Number(inv?.paid_amount) || 0;
+                  const remaining = amount - paidAmount;
                   return (
                     <tr key={inv.id} style={{ borderBottom: "1px solid #e0e0e0" }}>
                       <td style={{ padding: "12px" }}>
                         <Typography variant="body2" fontWeight="bold">
-                          {inv.invoice_number}
+                          {inv?.invoice_number || "—"}
                         </Typography>
                       </td>
-                      <td style={{ padding: "12px" }}>{inv.client_name}</td>
-                      <td style={{ padding: "12px" }}>{inv.project_name || "-"}</td>
+                      <td style={{ padding: "12px" }}>{inv?.client_name || "—"}</td>
+                      <td style={{ padding: "12px" }}>{inv?.project_name || "-"}</td>
                       <td style={{ padding: "12px" }}>{inv.invoice_date?.slice(0, 10)}</td>
                       <td style={{ padding: "12px", textAlign: "right" }}>
                         <Typography variant="body2" fontWeight="bold">
-                          {inv.amount?.toLocaleString()} DA
+                          {amount.toLocaleString()} DA
                         </Typography>
                       </td>
                       <td style={{ padding: "12px", textAlign: "right" }}>
-                        {inv.paid_amount?.toLocaleString() || 0} DA
+                        {paidAmount.toLocaleString()} DA
                       </td>
                       <td style={{ padding: "12px", textAlign: "right" }}>
                         <Typography variant="body2" color={remaining > 0 ? "error" : "success"}>
@@ -462,7 +465,7 @@ export default function Invoices() {
                         </Typography>
                       </td>
 <td style={{ padding: "12px" }}>
-                        <StatusChip status={inv.status} type="invoice" />
+                        <StatusChip status={inv?.status || "Draft"} type="invoice" />
                       </td>
                       <td style={{ padding: "12px" }}>
                         <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -567,7 +570,7 @@ export default function Invoices() {
               disabled={!!editId}
               required
             >
-              {clients.map((c) => (
+              {(clients || []).map((c) => (
                 <MenuItem key={c.id} value={c.id}>
                   {c.name} {c.company_name ? `(${c.company_name})` : ""}
                 </MenuItem>
@@ -583,7 +586,7 @@ export default function Invoices() {
               onChange={handleFormChange}
             >
               <MenuItem value="">{t("none")}</MenuItem>
-              {projects.map((p) => (
+              {(projects || []).map((p) => (
                 <MenuItem key={p.id} value={p.id}>
                   {p.name}
                 </MenuItem>

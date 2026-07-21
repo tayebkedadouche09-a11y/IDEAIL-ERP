@@ -112,25 +112,60 @@ async function loadData() {
           api.get("/vehicles"),
         ]);
       
-      // Handle both old format (array) and new format (object with data)
+      const expensesData = Array.isArray(expensesRes.data)
+        ? expensesRes.data
+        : Array.isArray(expensesRes.data?.data)
+          ? expensesRes.data.data
+          : [];
+      setExpenses(expensesData);
       if (Array.isArray(expensesRes.data)) {
-        setExpenses(expensesRes.data);
         setTotal(expensesRes.data.length);
         setTotalPages(1);
       } else {
-        setExpenses(expensesRes.data.data || []);
-        setTotal(expensesRes.data.pagination?.total || 0);
-        setTotalPages(expensesRes.data.pagination?.totalPages || 1);
+        setTotal(expensesRes.data?.pagination?.total || 0);
+        setTotalPages(expensesRes.data?.pagination?.totalPages || 1);
       }
-      
-      setCategories(categoriesRes.data || []);
-      setProjects(projectsRes.data || []);
-      setSuppliers(suppliersRes.data || []);
-      setEmployees(employeesRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-      calculateStats(expensesRes.data.data || expensesRes.data || []);
+
+      const categoriesData = Array.isArray(categoriesRes.data)
+        ? categoriesRes.data
+        : Array.isArray(categoriesRes.data?.data)
+          ? categoriesRes.data.data
+          : [];
+      const projectsData = Array.isArray(projectsRes.data)
+        ? projectsRes.data
+        : Array.isArray(projectsRes.data?.data)
+          ? projectsRes.data.data
+          : [];
+      const suppliersData = Array.isArray(suppliersRes.data)
+        ? suppliersRes.data
+        : Array.isArray(suppliersRes.data?.data)
+          ? suppliersRes.data.data
+          : [];
+      const employeesData = Array.isArray(employeesRes.data)
+        ? employeesRes.data
+        : Array.isArray(employeesRes.data?.data)
+          ? employeesRes.data.data
+          : [];
+      const vehiclesData = Array.isArray(vehiclesRes.data)
+        ? vehiclesRes.data
+        : Array.isArray(vehiclesRes.data?.data)
+          ? vehiclesRes.data.data
+          : [];
+
+      setCategories(categoriesData);
+      setProjects(projectsData);
+      setSuppliers(suppliersData);
+      setEmployees(employeesData);
+      setVehicles(vehiclesData);
+      calculateStats(expensesData);
     } catch (err) {
-      console.log(err);
+      setExpenses([]);
+      setCategories([]);
+      setProjects([]);
+      setSuppliers([]);
+      setEmployees([]);
+      setVehicles([]);
+      calculateStats([]);
       showSnackbar("Error loading expenses", "error");
     } finally {
       setLoading(false);
@@ -142,18 +177,23 @@ async function loadData() {
   }
 
   function calculateStats(data) {
+    const safeData = Array.isArray(data) ? data : [];
     const now = new Date();
     const thisMonth = now.toISOString().slice(0, 7);
     
     const newStats = {
-      total: data.reduce((sum, e) => sum + (e.total_amount || 0), 0),
-      thisMonth: data
-        .filter(e => e.expense_date?.startsWith(thisMonth))
+      total: safeData.reduce((sum, e) => sum + (e.total_amount || 0), 0),
+      thisMonth: safeData
+        .filter((e) => e.expense_date?.startsWith(thisMonth))
         .reduce((sum, e) => sum + (e.total_amount || 0), 0),
-      pending: data.filter(e => e.status === "pending").length,
-      paid: data.filter(e => e.status === "paid").length,
-      projectCosts: data.filter(e => e.project_id).reduce((sum, e) => sum + (e.total_amount || 0), 0),
-      operatingCosts: data.filter(e => !e.project_id).reduce((sum, e) => sum + (e.total_amount || 0), 0),
+      pending: safeData.filter((e) => e.status === "pending").length,
+      paid: safeData.filter((e) => e.status === "paid").length,
+      projectCosts: safeData
+        .filter((e) => e.project_id)
+        .reduce((sum, e) => sum + (e.total_amount || 0), 0),
+      operatingCosts: safeData
+        .filter((e) => !e.project_id)
+        .reduce((sum, e) => sum + (e.total_amount || 0), 0),
     };
     setStats(newStats);
   }
@@ -239,7 +279,8 @@ async function loadData() {
     }
   }
 
-  const filteredExpenses = expenses
+  const safeExpenses = Array.isArray(expenses) ? expenses : [];
+  const filteredExpenses = safeExpenses
     .filter((e) => categoryFilter === "all" || e.category_id === categoryFilter)
     .filter((e) =>
       searchTerm === "" ||
@@ -432,7 +473,7 @@ async function loadData() {
             onChange={change}
           >
             <MenuItem value="">-- Select --</MenuItem>
-            {categories.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+            {(Array.isArray(categories) ? categories : []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
           </TextField>
           <TextField
             fullWidth
@@ -477,7 +518,7 @@ async function loadData() {
             onChange={change}
           >
             <MenuItem value="">-- None --</MenuItem>
-            {projects.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+            {(Array.isArray(projects) ? projects : []).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
           <TextField
             select
@@ -489,7 +530,7 @@ async function loadData() {
             onChange={change}
           >
             <MenuItem value="">-- None --</MenuItem>
-            {suppliers.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+            {(Array.isArray(suppliers) ? suppliers : []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
           </TextField>
           <TextField
             select
@@ -501,7 +542,7 @@ async function loadData() {
             onChange={change}
           >
             <MenuItem value="">-- None --</MenuItem>
-            {employees.map((e) => <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>)}
+            {(Array.isArray(employees) ? employees : []).map((e) => <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>)}
           </TextField>
           <TextField
             select
@@ -513,7 +554,7 @@ async function loadData() {
             onChange={change}
           >
             <MenuItem value="">-- None --</MenuItem>
-            {vehicles.map((v) => <MenuItem key={v.id} value={v.id}>{v.registration_number} - {v.brand}</MenuItem>)}
+            {(Array.isArray(vehicles) ? vehicles : []).map((v) => <MenuItem key={v.id} value={v.id}>{v.registration_number} - {v.brand}</MenuItem>)}
           </TextField>
 
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>

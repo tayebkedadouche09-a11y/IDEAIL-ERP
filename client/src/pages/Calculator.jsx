@@ -132,7 +132,7 @@ export default function Calculator() {
         setSystems(res.data.data || []);
       }
     } catch (error) {
-      console.log(error);
+      setSystems([]);
     }
   }
 
@@ -146,7 +146,7 @@ export default function Calculator() {
         setClients(res.data.data || []);
       }
     } catch (error) {
-      console.log(error);
+      setClients([]);
     }
   }
 
@@ -160,7 +160,7 @@ export default function Calculator() {
         setProducts(res.data.data || []);
       }
     } catch (error) {
-      console.log(error);
+      setProducts([]);
     }
   }
 
@@ -168,11 +168,15 @@ export default function Calculator() {
     try {
       const res = await api.get("/projects");
       // Handle both old format (array) and new format (object with data)
-      const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
       const filtered = data.filter((p) => Number(p.client_id) === Number(id));
       setProjects(filtered);
     } catch (error) {
-      console.log(error);
+      setProjects([]);
     }
   }
 
@@ -191,7 +195,9 @@ export default function Calculator() {
         setTotalPages(res.data.pagination?.totalPages || 1);
       }
     } catch (error) {
-      console.log(error);
+      setCalculations([]);
+      setTotal(0);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -235,7 +241,12 @@ export default function Calculator() {
 
       if (sector === "resin" && systemId && surface) {
         const res = await api.get(`/calculator/${systemId}`);
-        materials = res.data.map((item) => {
+        const items = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
+        materials = items.map((item) => {
           const quantity = Number(surface) * Number(item.consumption);
           const cost = quantity * Number(item.purchase_price);
           materialTotal += cost;

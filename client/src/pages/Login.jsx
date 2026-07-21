@@ -57,7 +57,7 @@ function Login() {
         } else {
           setError(serverError);
         }
-      } else if (err.code === 'NETWORK_ERROR' || !err.response) {
+      } else if (err.code === "ERR_NETWORK" || err.code === "ECONNABORTED" || !err.response) {
         setError("Server Offline - Unable to connect to the server");
       } else {
         setError("An error occurred during login");

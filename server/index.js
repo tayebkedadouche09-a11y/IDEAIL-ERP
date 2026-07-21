@@ -5,6 +5,7 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const db = require("./database");
 const { authenticateToken } = require("./middleware/auth");
+const { requireModuleAccess } = require("./middleware/rbac");
 
 // Import routes
 const authRoutes = require("./routes/auth");
@@ -39,6 +40,7 @@ const backupRoutes = require("./routes/backup");
 const searchRoutes = require("./routes/search");
 const auditRoutes = require("./routes/audit");
 const suppliersRoutes = require("./routes/suppliers");
+const enterpriseRoutes = require("./routes/enterprise");
 
 // Import services
 const { eventBus } = require("./services/events");
@@ -101,10 +103,16 @@ const authLimiter = rateLimit({
 
 // Auth routes (login is public, register/me are protected internally)
 app.use("/auth", authLimiter, authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 
 // ======================
 // Protected Routes (Auth Required)
 // ======================
+
+// One authorization gate protects both legacy and /api route aliases.  It
+// applies the role's module access and method-specific CRUD permission before
+// any business route is reached.
+app.use(authenticateToken, requireModuleAccess);
 
 app.use("/clients", authenticateToken, clientsRoutes);
 app.use("/projects", authenticateToken, projectsRoutes);
@@ -142,6 +150,40 @@ app.use("/backup", authenticateToken, backupRoutes);
 app.use("/search", authenticateToken, searchRoutes);
 app.use("/audit", authenticateToken, auditRoutes);
 app.use("/suppliers", authenticateToken, suppliersRoutes);
+app.use("/enterprise", authenticateToken, enterpriseRoutes);
+
+app.use("/api/clients", authenticateToken, clientsRoutes);
+app.use("/api/projects", authenticateToken, projectsRoutes);
+app.use("/api/invoices", authenticateToken, invoicesRoutes);
+app.use("/api/products", authenticateToken, productsRoutes);
+app.use("/api/systems", authenticateToken, systemsRoutes);
+app.use("/api/system-products", authenticateToken, systemProductsRoutes);
+app.use("/api/stock", authenticateToken, stockRoutes);
+app.use("/api/employees", authenticateToken, employeesRoutes);
+app.use("/api/employee-evaluations", authenticateToken, employeeEvaluationsRoutes);
+app.use("/api/company", authenticateToken, companyRouter);
+app.use("/api/project-materials", authenticateToken, projectMaterialsRoutes);
+app.use("/api/project-expenses", authenticateToken, projectExpensesRoutes);
+app.use("/api/calculator", authenticateToken, calculatorRoutes);
+app.use("/api/pdf", authenticateToken, pdfRoutes);
+app.use("/api/devis", authenticateToken, devisRoutes);
+app.use("/api/dashboard", authenticateToken, dashboardRoutes);
+app.use("/api/reports", authenticateToken, reportsRoutes);
+app.use("/api/financial", authenticateToken, financialRoutes);
+app.use("/api/profitability", authenticateToken, profitabilityRoutes);
+app.use("/api/calculation", authenticateToken, calculationRoutes);
+app.use("/api/inventory", authenticateToken, inventoryRoutes);
+app.use("/api/ai", authenticateToken, aiRoutes);
+app.use("/api/assistant", authenticateToken, assistantRoutes);
+app.use("/api/automation", authenticateToken, automationRoutes);
+app.use("/api/vehicles", authenticateToken, vehiclesRoutes);
+app.use("/api/documents", authenticateToken, documentsRoutes);
+app.use("/api/calendar", authenticateToken, calendarRoutes);
+app.use("/api/backup", authenticateToken, backupRoutes);
+app.use("/api/search", authenticateToken, searchRoutes);
+app.use("/api/audit", authenticateToken, auditRoutes);
+app.use("/api/suppliers", authenticateToken, suppliersRoutes);
+app.use("/api/enterprise", authenticateToken, enterpriseRoutes);
 
 // Initialize Automation Scheduler
 const { initScheduler } = require("./services/automation");
@@ -159,7 +201,23 @@ app.get("/notifications", authenticateToken, (req, res) => {
   });
 });
 
+app.get("/api/notifications", authenticateToken, (req, res) => {
+  const { notificationService } = require("./services/notification");
+  notificationService.getNotifications(db, (err, notifications) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(notifications);
+  });
+});
+
 app.get("/notifications/unread", authenticateToken, (req, res) => {
+  const { notificationService } = require("./services/notification");
+  notificationService.getUnreadNotifications(db, (err, notifications) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(notifications);
+  });
+});
+
+app.get("/api/notifications/unread", authenticateToken, (req, res) => {
   const { notificationService } = require("./services/notification");
   notificationService.getUnreadNotifications(db, (err, notifications) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -179,7 +237,27 @@ app.get("/notifications/count", authenticateToken, (req, res) => {
   );
 });
 
+app.get("/api/notifications/count", authenticateToken, (req, res) => {
+  const { notificationService } = require("./services/notification");
+  db.get(
+    "SELECT COUNT(*) as unread FROM notifications WHERE is_read = 0",
+    [],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ unread: result.unread });
+    }
+  );
+});
+
 app.put("/notifications/:id/read", authenticateToken, (req, res) => {
+  const { notificationService } = require("./services/notification");
+  notificationService.markAsRead(db, req.params.id, (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.put("/api/notifications/:id/read", authenticateToken, (req, res) => {
   const { notificationService } = require("./services/notification");
   notificationService.markAsRead(db, req.params.id, (err) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -194,7 +272,21 @@ app.put("/notifications/read-all", authenticateToken, (req, res) => {
   });
 });
 
+app.put("/api/notifications/read-all", authenticateToken, (req, res) => {
+  db.run("UPDATE notifications SET is_read = 1", [], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
 app.delete("/notifications/:id", authenticateToken, (req, res) => {
+  db.run("DELETE FROM notifications WHERE id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.delete("/api/notifications/:id", authenticateToken, (req, res) => {
   db.run("DELETE FROM notifications WHERE id = ?", [req.params.id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true });

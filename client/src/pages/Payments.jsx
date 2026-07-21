@@ -88,23 +88,46 @@ export default function Payments() {
           api.get("/invoices"),
         ]);
       
-      // Handle both old format (array) and new format (object with data)
+      const paymentsData = Array.isArray(paymentsRes.data)
+        ? paymentsRes.data
+        : Array.isArray(paymentsRes.data?.data)
+          ? paymentsRes.data.data
+          : [];
+      setPayments(paymentsData);
       if (Array.isArray(paymentsRes.data)) {
-        setPayments(paymentsRes.data);
         setTotal(paymentsRes.data.length);
         setTotalPages(1);
       } else {
-        setPayments(paymentsRes.data.data || []);
-        setTotal(paymentsRes.data.pagination?.total || 0);
-        setTotalPages(paymentsRes.data.pagination?.totalPages || 1);
+        setTotal(paymentsRes.data?.pagination?.total || 0);
+        setTotalPages(paymentsRes.data?.pagination?.totalPages || 1);
       }
-      
-      setClients(clientsRes.data || []);
-      setSuppliers(suppliersRes.data || []);
-      setInvoices(invoicesRes.data || []);
-      calculateStats(paymentsRes.data.data || paymentsRes.data || []);
+
+      const clientsData = Array.isArray(clientsRes.data)
+        ? clientsRes.data
+        : Array.isArray(clientsRes.data?.data)
+          ? clientsRes.data.data
+          : [];
+      const suppliersData = Array.isArray(suppliersRes.data)
+        ? suppliersRes.data
+        : Array.isArray(suppliersRes.data?.data)
+          ? suppliersRes.data.data
+          : [];
+      const invoicesData = Array.isArray(invoicesRes.data)
+        ? invoicesRes.data
+        : Array.isArray(invoicesRes.data?.data)
+          ? invoicesRes.data.data
+          : [];
+
+      setClients(clientsData);
+      setSuppliers(suppliersData);
+      setInvoices(invoicesData);
+      calculateStats(paymentsData);
     } catch (err) {
-      console.log(err);
+      setPayments([]);
+      setClients([]);
+      setSuppliers([]);
+      setInvoices([]);
+      calculateStats([]);
       showSnackbar("Error loading payments", "error");
     } finally {
       setLoading(false);
@@ -116,28 +139,29 @@ export default function Payments() {
   }
 
   function calculateStats(data) {
+    const safeData = Array.isArray(data) ? data : [];
     const now = new Date();
     const thisMonth = now.toISOString().slice(0, 7);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
     
     const newStats = {
-      collected: data
-        .filter(p => p.payment_type === "client_payment")
+      collected: safeData
+        .filter((p) => p.payment_type === "client_payment")
         .reduce((sum, p) => sum + (p.amount || 0), 0),
-      pending: data
-        .filter(p => p.payment_type === "supplier_payment")
+      pending: safeData
+        .filter((p) => p.payment_type === "supplier_payment")
         .reduce((sum, p) => sum + (p.amount || 0), 0),
-      cash: data
-        .filter(p => p.payment_method === "cash")
+      cash: safeData
+        .filter((p) => p.payment_method === "cash")
         .reduce((sum, p) => sum + (p.amount || 0), 0),
-      bank: data
-        .filter(p => p.payment_method === "bank_transfer" || p.payment_method === "card")
+      bank: safeData
+        .filter((p) => p.payment_method === "bank_transfer" || p.payment_method === "card")
         .reduce((sum, p) => sum + (p.amount || 0), 0),
-      thisMonth: data
-        .filter(p => p.payment_date?.startsWith(thisMonth))
+      thisMonth: safeData
+        .filter((p) => p.payment_date?.startsWith(thisMonth))
         .reduce((sum, p) => sum + (p.amount || 0), 0),
-      lastMonth: data
-        .filter(p => p.payment_date?.startsWith(lastMonth))
+      lastMonth: safeData
+        .filter((p) => p.payment_date?.startsWith(lastMonth))
         .reduce((sum, p) => sum + (p.amount || 0), 0),
     };
     setStats(newStats);
@@ -228,8 +252,9 @@ export default function Payments() {
     }
   }
 
-  const clientPayments = payments.filter((p) => p.payment_type === "client_payment");
-  const supplierPayments = payments.filter((p) => p.payment_type === "supplier_payment");
+  const safePayments = Array.isArray(payments) ? payments : [];
+  const clientPayments = safePayments.filter((p) => p.payment_type === "client_payment");
+  const supplierPayments = safePayments.filter((p) => p.payment_type === "supplier_payment");
 
   return (
     <Box>
@@ -498,7 +523,7 @@ export default function Payments() {
               onChange={change}
             >
               <MenuItem value="">-- Select Client --</MenuItem>
-              {clients.map((c) => <MenuItem key={c.id} value={c.id}>{c.name} {c.company_name ? `(${c.company_name})` : ""}</MenuItem>)}
+              {(Array.isArray(clients) ? clients : []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name} {c.company_name ? `(${c.company_name})` : ""}</MenuItem>)}
             </TextField>
           ) : (
             <TextField
@@ -511,7 +536,7 @@ export default function Payments() {
               onChange={change}
             >
               <MenuItem value="">-- Select Supplier --</MenuItem>
-              {suppliers.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+              {(Array.isArray(suppliers) ? suppliers : []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
             </TextField>
           )}
 
@@ -526,7 +551,7 @@ export default function Payments() {
               onChange={change}
             >
               <MenuItem value="">-- None --</MenuItem>
-              {invoices.map((inv) => <MenuItem key={inv.id} value={inv.id}>{inv.invoice_number} - {inv.client_name} - {inv.amount?.toLocaleString()} DA</MenuItem>)}
+              {(Array.isArray(invoices) ? invoices : []).map((inv) => <MenuItem key={inv.id} value={inv.id}>{inv.invoice_number} - {inv.client_name} - {inv.amount?.toLocaleString()} DA</MenuItem>)}
             </TextField>
           )}
 

@@ -43,6 +43,13 @@ router.post("/login", validateLogin, (req, res) => {
       // Generate token
       const token = generateToken(user);
 
+      db.run(
+        `INSERT INTO audit_logs (user_id, action, module, new_value, ip_address, user_agent)
+         VALUES (?, 'login', 'security', ?, ?, ?)`,
+        [user.id, JSON.stringify({ username: user.username }), req.ip, req.get("user-agent") || null],
+        () => {}
+      );
+
       res.json({
         token,
         user: {

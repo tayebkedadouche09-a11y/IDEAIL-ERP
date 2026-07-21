@@ -73,17 +73,33 @@ export default function Stock() {
           api.get("/products"),
         ]);
       // Handle both old format (array) and new format (object with data)
+      const movementsData = Array.isArray(movementsRes.data)
+        ? movementsRes.data
+        : Array.isArray(movementsRes.data?.data)
+          ? movementsRes.data.data
+          : [];
+      setMovements(movementsData);
       if (Array.isArray(movementsRes.data)) {
-        setMovements(movementsRes.data);
         setTotal(movementsRes.data.length);
         setTotalPages(1);
       } else {
-        setMovements(movementsRes.data.data || []);
-        setTotal(movementsRes.data.pagination?.total || 0);
-        setTotalPages(movementsRes.data.pagination?.totalPages || 1);
+        setTotal(movementsRes.data?.pagination?.total || 0);
+        setTotalPages(movementsRes.data?.pagination?.totalPages || 1);
       }
-      setBalance(balanceRes.data || []);
-      setAlerts(alertsRes.data || []);
+
+      const balanceData = Array.isArray(balanceRes.data)
+        ? balanceRes.data
+        : Array.isArray(balanceRes.data?.data)
+          ? balanceRes.data.data
+          : [];
+      const alertsData = Array.isArray(alertsRes.data)
+        ? alertsRes.data
+        : Array.isArray(alertsRes.data?.data)
+          ? alertsRes.data.data
+          : [];
+
+      setBalance(balanceData);
+      setAlerts(alertsData);
       setValuation(valuationRes.data);
       // Handle both old format (array) and new format (object with data)
       if (Array.isArray(productsRes.data)) {
@@ -91,9 +107,14 @@ export default function Stock() {
       } else {
         setProducts(productsRes.data.data || []);
       }
-      calculateStats(balanceRes.data || [], movementsRes.data || [], valuationRes.data);
+      calculateStats(balanceData, movementsData, valuationRes.data);
     } catch (err) {
-      console.log(err);
+      setMovements([]);
+      setBalance([]);
+      setAlerts([]);
+      setValuation(null);
+      setProducts([]);
+      calculateStats([], [], null);
       showSnackbar("Error loading stock data", "error");
     } finally {
       setLoading(false);
@@ -105,13 +126,19 @@ export default function Stock() {
   }
 
   function calculateStats(balanceData, movementsData, valuationData) {
-    const lowStock = balanceData.filter(p => p.quantity <= p.minimum_quantity && p.quantity > 0).length;
-    const outOfStock = balanceData.filter(p => p.quantity === 0).length;
-    const incoming = movementsData.filter(m => m.movement_type === "Entrée").reduce((sum, m) => sum + (m.quantity || 0), 0);
-    const used = movementsData.filter(m => m.movement_type === "Sortie").reduce((sum, m) => sum + (m.quantity || 0), 0);
+    const safeBalance = Array.isArray(balanceData) ? balanceData : [];
+    const safeMovements = Array.isArray(movementsData) ? movementsData : [];
+    const lowStock = safeBalance.filter((p) => p.quantity <= p.minimum_quantity && p.quantity > 0).length;
+    const outOfStock = safeBalance.filter((p) => p.quantity === 0).length;
+    const incoming = safeMovements
+      .filter((m) => m.movement_type === "Entrée")
+      .reduce((sum, m) => sum + (m.quantity || 0), 0);
+    const used = safeMovements
+      .filter((m) => m.movement_type === "Sortie")
+      .reduce((sum, m) => sum + (m.quantity || 0), 0);
 
     const newStats = {
-      totalItems: balanceData.length,
+      totalItems: safeBalance.length,
       totalValue: valuationData?.totalValue || 0,
       lowStock: lowStock,
       outOfStock: outOfStock,

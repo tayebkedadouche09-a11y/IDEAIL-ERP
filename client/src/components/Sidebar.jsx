@@ -43,6 +43,8 @@ import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import BackupIcon from "@mui/icons-material/Backup";
 import SearchIcon from "@mui/icons-material/Search";
+import BusinessIcon from "@mui/icons-material/Business";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 
 import { useLanguage } from "../context/LanguageContext";
 import { sizes, borderRadius, transitions, shadows } from "../theme/designTokens";
@@ -234,6 +236,23 @@ const menuSections = [
       },
     ],
   },
+  {
+    titleKey: "ENTERPRISE",
+    items: [
+      { textKey: "companies", icon: <BusinessIcon />, path: "/companies" },
+      { textKey: "accounting", icon: <AccountBalanceIcon />, path: "/accounts" },
+      { textKey: "procurement", icon: <LocalShippingIcon />, path: "/purchase-requests" },
+      { textKey: "assets", icon: <Inventory2Icon />, path: "/assets" },
+      { textKey: "quality", icon: <ScienceIcon />, path: "/quality" },
+      { textKey: "production", icon: <EngineeringIcon />, path: "/production" },
+      { textKey: "crm", icon: <PeopleIcon />, path: "/leads" },
+      { textKey: "tasks", icon: <AccessTimeIcon />, path: "/tasks" },
+      { textKey: "contracts", icon: <DescriptionIcon />, path: "/contracts" },
+      { textKey: "workflow", icon: <AutoAwesomeIcon />, path: "/workflows" },
+      { textKey: "portals", icon: <PeopleIcon />, path: "/portal-requests" },
+      { textKey: "reportDesigner", icon: <BarChartIcon />, path: "/report-designer" },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -291,67 +310,68 @@ export default function Sidebar() {
             {t(section.titleKey)}
           </Typography>
           <List sx={{ px: 1 }}>
-            {section.items.map((item) => (
-              <ListItemButton
-                key={item.path}
-                component={Link}
-                to={item.path}
-                selected={location.pathname === item.path}
-                onClick={handleMenuItemClick}
-                sx={{
-                  borderRadius: borderRadius.lg,
-                  mb: 0.5,
-                  mx: 1,
-                  pl: 2,
-                  transition: transitions.fast,
-                  position: "relative",
-                  "&.Mui-selected": {
-                    pl: 2,
-                    bgcolor: "primary.light",
-                    color: "primary.main",
-                    "&:hover": {
-                      bgcolor: "primary.light",
-                    },
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      left: 0,
-                      top: 8,
-                      bottom: 8,
-                      width: 3,
-                      bgcolor: "primary.main",
-                      borderRadius: borderRadius.full,
-                    },
-                  },
-                  "&:hover": {
-                    bgcolor: "action.hover",
-                    transform: "translateX(4px)",
-                    boxShadow: shadows.elevated,
-                  },
-                }}
-              >
-                <ListItemIcon
+            {section.items.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <ListItemButton
+                  key={item.path}
+                  component={Link}
+                  to={item.path}
+                  onClick={handleMenuItemClick}
                   sx={{
-                    color:
-                      location.pathname === item.path
-                        ? "primary.main"
-                        : "text.secondary",
+                    borderRadius: borderRadius.lg,
+                    mb: 0.5,
+                    mx: 1,
+                    pl: 2,
                     transition: transitions.fast,
-                    minWidth: 40,
+                    position: "relative",
+                    ...(isActive
+                      ? {
+                          pl: 2,
+                          bgcolor: "primary.light",
+                          color: "primary.main",
+                          "&:hover": {
+                            bgcolor: "primary.light",
+                          },
+                          "&::before": {
+                            content: '""',
+                            position: "absolute",
+                            left: 0,
+                            top: 8,
+                            bottom: 8,
+                            width: 3,
+                            bgcolor: "primary.main",
+                            borderRadius: borderRadius.full,
+                          },
+                        }
+                      : {}),
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                      transform: "translateX(4px)",
+                      boxShadow: shadows.elevated,
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
+                  <ListItemIcon
+                    sx={{
+                      color: isActive ? "primary.main" : "text.secondary",
+                      transition: transitions.fast,
+                      minWidth: 40,
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
 
-                <ListItemText
-                  primary={t(item.textKey)}
-                  primaryTypographyProps={{
-                    fontWeight: location.pathname === item.path ? 600 : 400,
-                    fontSize: 14,
-                  }}
-                />
-              </ListItemButton>
-            ))}
+                  <ListItemText
+                    primary={t(item.textKey)}
+                    primaryTypographyProps={{
+                      fontWeight: isActive ? 600 : 400,
+                      fontSize: 14,
+                    }}
+                  />
+                </ListItemButton>
+              );
+            })}
           </List>
         </Box>
       ))}

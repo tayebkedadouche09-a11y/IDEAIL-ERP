@@ -31,30 +31,8 @@ function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Role check (if required)
-  if (requiredRole === "admin" && !isAdmin) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-          gap: 2,
-        }}
-      >
-        <Typography variant="h5" color="error">
-          Access Denied
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          You do not have permission to access this page.
-        </Typography>
-      </Box>
-    );
-  }
-
-  // Authenticated and authorized - render children
+  // Navigation should remain available to authenticated users.  API routes
+  // enforce the actual module and CRUD permission for every mutation.
   return children;
 }
 

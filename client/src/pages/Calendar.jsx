@@ -112,12 +112,31 @@ export default function Calendar() {
         setTotalPages(eventsRes.data.pagination?.totalPages || 1);
       }
       
-      setProjects(projectsRes.data || []);
-      setClients(clientsRes.data || []);
-      setEmployees(employeesRes.data || []);
+      const projectsData = Array.isArray(projectsRes.data)
+        ? projectsRes.data
+        : Array.isArray(projectsRes.data?.data)
+          ? projectsRes.data.data
+          : [];
+      const clientsData = Array.isArray(clientsRes.data)
+        ? clientsRes.data
+        : Array.isArray(clientsRes.data?.data)
+          ? clientsRes.data.data
+          : [];
+      const employeesData = Array.isArray(employeesRes.data)
+        ? employeesRes.data
+        : Array.isArray(employeesRes.data?.data)
+          ? employeesRes.data.data
+          : [];
+
+      setProjects(projectsData);
+      setClients(clientsData);
+      setEmployees(employeesData);
       setStats(statsRes.data || stats);
     } catch (err) {
-      console.log(err);
+      setEvents([]);
+      setProjects([]);
+      setClients([]);
+      setEmployees([]);
       showSnackbar(t("errorOccurred"), "error");
     } finally {
       setLoading(false);

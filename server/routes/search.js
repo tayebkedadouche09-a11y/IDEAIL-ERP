@@ -93,10 +93,10 @@ router.get("/", (req, res) => {
   queries.push(
     new Promise((resolve) => {
       db.all(
-        `SELECT id, name, reference_code, category, current_stock FROM products 
-         WHERE name LIKE ? OR reference_code LIKE ? 
+        `SELECT id, name, category, quantity, minimum_quantity, supplier FROM products
+         WHERE name LIKE ? OR category LIKE ? OR supplier LIKE ?
          LIMIT 10`,
-        [searchTerm, searchTerm],
+        [searchTerm, searchTerm, searchTerm],
         (err, rows) => {
           results.products = err ? [] : rows;
           resolve();
@@ -109,10 +109,11 @@ router.get("/", (req, res) => {
   queries.push(
     new Promise((resolve) => {
       db.all(
-        `SELECT id, name, document_type, file_path, entity_type FROM documents 
-         WHERE name LIKE ? 
+        `SELECT id, name, category, type, file_path, file_type, project_id, client_id, supplier_id
+         FROM documents
+         WHERE name LIKE ? OR category LIKE ? OR description LIKE ?
          LIMIT 10`,
-        [searchTerm],
+        [searchTerm, searchTerm, searchTerm],
         (err, rows) => {
           results.documents = err ? [] : rows;
           resolve();
@@ -211,12 +212,12 @@ router.get("/:module", (req, res) => {
       params = [searchTerm, searchTerm, parseInt(limit), offset];
       break;
     case "products":
-      sql = `SELECT * FROM products WHERE name LIKE ? OR reference_code LIKE ? LIMIT ? OFFSET ?`;
-      params = [searchTerm, searchTerm, parseInt(limit), offset];
+      sql = `SELECT * FROM products WHERE name LIKE ? OR category LIKE ? OR supplier LIKE ? LIMIT ? OFFSET ?`;
+      params = [searchTerm, searchTerm, searchTerm, parseInt(limit), offset];
       break;
     case "documents":
-      sql = `SELECT * FROM documents WHERE name LIKE ? LIMIT ? OFFSET ?`;
-      params = [searchTerm, parseInt(limit), offset];
+      sql = `SELECT * FROM documents WHERE name LIKE ? OR category LIKE ? OR description LIKE ? LIMIT ? OFFSET ?`;
+      params = [searchTerm, searchTerm, searchTerm, parseInt(limit), offset];
       break;
     case "devis":
       sql = `SELECT * FROM devis WHERE devis_number LIKE ? OR title LIKE ? LIMIT ? OFFSET ?`;

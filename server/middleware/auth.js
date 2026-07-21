@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const db = require("../database");
 
 // JWT secret key - should be in .env in production
 const JWT_SECRET = process.env.JWT_SECRET || "ideail_erp_jwt_secret_key_change_in_production";
@@ -45,6 +46,33 @@ function authenticateToken(req, res, next) {
       email: decoded.email,
       role: decoded.role,
     };
+
+    // Record state-changing and data-extraction actions after the response is
+    // sent.  This keeps auditing from changing business-route behaviour.
+    const isDownload = req.method === "GET" && /\/(download|export)\b/i.test(req.originalUrl || req.url);
+    if (!req.auditListenerAttached && (!["GET", "HEAD", "OPTIONS"].includes(req.method) || isDownload)) {
+      req.auditListenerAttached = true;
+      res.on("finish", () => {
+        if (res.statusCode >= 400) return;
+        const route = (req.baseUrl || req.originalUrl || "").replace(/^\/api/, "");
+        const moduleName = route.split("/").filter(Boolean)[0] || "system";
+        const action = isDownload ? "download" : ({ POST: "create", PUT: "update", PATCH: "update", DELETE: "delete" }[req.method] || req.method.toLowerCase());
+        db.run(
+          `INSERT INTO audit_logs (user_id, action, module, record_id, new_value, ip_address, user_agent)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            req.user.id,
+            action,
+            moduleName,
+            Number.isInteger(Number(req.params?.id)) ? Number(req.params.id) : null,
+            JSON.stringify({ method: req.method, path: req.originalUrl }),
+            req.ip,
+            req.get("user-agent") || null,
+          ],
+          () => {}
+        );
+      });
+    }
     next();
   });
 }

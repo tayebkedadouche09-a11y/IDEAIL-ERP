@@ -964,22 +964,147 @@ db.serialize(() => {
       project_id INTEGER,
       client_id INTEGER,
       supplier_id INTEGER,
+      employee_id INTEGER,
+      invoice_id INTEGER,
+      quotation_id INTEGER,
       file_path TEXT,
       file_type TEXT,
       file_size INTEGER DEFAULT 0,
+      version INTEGER DEFAULT 1,
       description TEXT,
       status TEXT DEFAULT 'active',
       uploaded_by TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(project_id) REFERENCES projects(id),
       FOREIGN KEY(client_id) REFERENCES clients(id),
-      FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+      FOREIGN KEY(supplier_id) REFERENCES suppliers(id),
+      FOREIGN KEY(employee_id) REFERENCES employees(id),
+      FOREIGN KEY(invoice_id) REFERENCES invoices(id),
+      FOREIGN KEY(quotation_id) REFERENCES devis(id)
   )
   `);
+
+  // Upgrade databases created before document versioning and additional links.
+  // SQLite has no ADD COLUMN IF NOT EXISTS; duplicate-column errors are harmless.
+  [
+    "ALTER TABLE documents ADD COLUMN employee_id INTEGER",
+    "ALTER TABLE documents ADD COLUMN invoice_id INTEGER",
+    "ALTER TABLE documents ADD COLUMN quotation_id INTEGER",
+    "ALTER TABLE documents ADD COLUMN version INTEGER DEFAULT 1",
+  ].forEach((migration) => db.run(migration, () => {}));
 
   // ===============================
   // CALCULATIONS
   // ===============================
+
+  // Enterprise extensions.  These entities intentionally use explicit
+  // relationships so accounting, procurement, operations and portals share
+  // the same ERP database rather than isolated feature stores.
+  db.run(`CREATE TABLE IF NOT EXISTS companies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT UNIQUE,
+    tax_number TEXT, currency TEXT DEFAULT 'DZD', address TEXT, phone TEXT, email TEXT,
+    status TEXT DEFAULT 'active', created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS branches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER NOT NULL, name TEXT NOT NULL,
+    code TEXT, address TEXT, manager_id INTEGER, status TEXT DEFAULT 'active',
+    FOREIGN KEY(company_id) REFERENCES companies(id), FOREIGN KEY(manager_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS chart_of_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
+    account_type TEXT NOT NULL, parent_id INTEGER, opening_balance REAL DEFAULT 0,
+    active INTEGER DEFAULT 1, FOREIGN KEY(parent_id) REFERENCES chart_of_accounts(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS financial_periods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL, status TEXT DEFAULT 'open'
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS journal_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, entry_number TEXT UNIQUE, entry_date TEXT NOT NULL,
+    reference TEXT, description TEXT, period_id INTEGER, status TEXT DEFAULT 'draft',
+    created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(period_id) REFERENCES financial_periods(id), FOREIGN KEY(created_by) REFERENCES users(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS journal_entry_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, journal_entry_id INTEGER NOT NULL, account_id INTEGER NOT NULL,
+    description TEXT, debit REAL DEFAULT 0, credit REAL DEFAULT 0,
+    FOREIGN KEY(journal_entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE,
+    FOREIGN KEY(account_id) REFERENCES chart_of_accounts(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS purchase_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, request_number TEXT UNIQUE, requester_id INTEGER,
+    department TEXT, request_date TEXT, required_date TEXT, status TEXT DEFAULT 'draft',
+    notes TEXT, FOREIGN KEY(requester_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS assets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, asset_code TEXT UNIQUE, name TEXT NOT NULL,
+    category TEXT, purchase_date TEXT, purchase_value REAL DEFAULT 0, useful_life_months INTEGER,
+    depreciation_method TEXT DEFAULT 'straight_line', location TEXT, responsible_employee_id INTEGER,
+    status TEXT DEFAULT 'active', FOREIGN KEY(responsible_employee_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS quality_inspections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, inspection_number TEXT UNIQUE, subject_type TEXT NOT NULL,
+    subject_id INTEGER, inspection_date TEXT, inspector_id INTEGER, status TEXT DEFAULT 'planned',
+    result TEXT, defects TEXT, corrective_action TEXT,
+    FOREIGN KEY(inspector_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS bills_of_materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL, version TEXT DEFAULT '1',
+    quantity REAL DEFAULT 1, status TEXT DEFAULT 'active', notes TEXT,
+    FOREIGN KEY(product_id) REFERENCES products(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS production_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, order_number TEXT UNIQUE, product_id INTEGER NOT NULL,
+    bom_id INTEGER, planned_quantity REAL DEFAULT 0, completed_quantity REAL DEFAULT 0,
+    start_date TEXT, due_date TEXT, status TEXT DEFAULT 'draft',
+    FOREIGN KEY(product_id) REFERENCES products(id), FOREIGN KEY(bom_id) REFERENCES bills_of_materials(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, company_name TEXT, email TEXT, phone TEXT,
+    source TEXT, stage TEXT DEFAULT 'new', estimated_value REAL DEFAULT 0, owner_id INTEGER, notes TEXT,
+    FOREIGN KEY(owner_id) REFERENCES users(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, description TEXT, project_id INTEGER,
+    assignee_id INTEGER, priority TEXT DEFAULT 'medium', due_date TEXT, status TEXT DEFAULT 'pending',
+    FOREIGN KEY(project_id) REFERENCES projects(id), FOREIGN KEY(assignee_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, leader_id INTEGER, department TEXT, notes TEXT,
+    FOREIGN KEY(leader_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS contracts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contract_number TEXT UNIQUE, title TEXT NOT NULL, contract_type TEXT,
+    client_id INTEGER, supplier_id INTEGER, employee_id INTEGER, start_date TEXT, end_date TEXT,
+    value REAL DEFAULT 0, status TEXT DEFAULT 'draft', terms TEXT,
+    FOREIGN KEY(client_id) REFERENCES clients(id), FOREIGN KEY(supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY(employee_id) REFERENCES employees(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS report_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, data_source TEXT NOT NULL,
+    fields_json TEXT, filters_json TEXT, sort_json TEXT, created_by INTEGER,
+    FOREIGN KEY(created_by) REFERENCES users(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS workflows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, entity_type TEXT NOT NULL,
+    definition_json TEXT NOT NULL, active INTEGER DEFAULT 1
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS approvals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL,
+    step_name TEXT, approver_id INTEGER, status TEXT DEFAULT 'pending', comments TEXT, decided_at TEXT,
+    FOREIGN KEY(approver_id) REFERENCES users(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS portal_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, portal_type TEXT NOT NULL, requester_name TEXT NOT NULL,
+    requester_email TEXT, subject TEXT NOT NULL, message TEXT, status TEXT DEFAULT 'open',
+    related_project_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(related_project_id) REFERENCES projects(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS maintenance_schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, asset_id INTEGER, vehicle_id INTEGER, title TEXT NOT NULL,
+    due_date TEXT, interval_days INTEGER, cost REAL DEFAULT 0, status TEXT DEFAULT 'scheduled', notes TEXT,
+    FOREIGN KEY(asset_id) REFERENCES assets(id), FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
+  )`);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS calculations (

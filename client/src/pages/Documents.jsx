@@ -89,25 +89,51 @@ export default function Documents() {
         api.get("/clients"),
         api.get("/suppliers"),
       ]);
-      setDocuments(docsRes.data || []);
-      setProjects(projectsRes.data || []);
-      setClients(clientsRes.data || []);
-      setSuppliers(suppliersRes.data || []);
-      calculateStats(docsRes.data || []);
+      const docsData = Array.isArray(docsRes.data)
+        ? docsRes.data
+        : Array.isArray(docsRes.data?.data)
+          ? docsRes.data.data
+          : [];
+      const projectsData = Array.isArray(projectsRes.data)
+        ? projectsRes.data
+        : Array.isArray(projectsRes.data?.data)
+          ? projectsRes.data.data
+          : [];
+      const clientsData = Array.isArray(clientsRes.data)
+        ? clientsRes.data
+        : Array.isArray(clientsRes.data?.data)
+          ? clientsRes.data.data
+          : [];
+      const suppliersData = Array.isArray(suppliersRes.data)
+        ? suppliersRes.data
+        : Array.isArray(suppliersRes.data?.data)
+          ? suppliersRes.data.data
+          : [];
+      setDocuments(docsData);
+      setProjects(projectsData);
+      setClients(clientsData);
+      setSuppliers(suppliersData);
+      calculateStats(docsData);
     } catch (err) {
-      console.log(err);
+      setDocuments([]);
+      setProjects([]);
+      setClients([]);
+      setSuppliers([]);
+      calculateStats([]);
+      setMessage({ type: "error", text: err.response?.data?.error || t("loadFailed") || "Load failed" });
     }
   }
 
   function calculateStats(data) {
-    const totalSize = data.reduce((sum, d) => sum + (d.size || 0), 0);
+    const safeData = Array.isArray(data) ? data : [];
+    const totalSize = safeData.reduce((sum, d) => sum + (d.size || 0), 0);
     const newStats = {
-      total: data.length,
-      projectDocs: data.filter(d => d.category === "projects").length,
-      invoiceDocs: data.filter(d => d.type === "invoice").length,
-      contractDocs: data.filter(d => d.type === "contract").length,
+      total: safeData.length,
+      projectDocs: safeData.filter((d) => d.category === "projects").length,
+      invoiceDocs: safeData.filter((d) => d.type === "invoice").length,
+      contractDocs: safeData.filter((d) => d.type === "contract").length,
       storageUsed: `${(totalSize / 1024 / 1024).toFixed(2)} MB`,
-      recentUploads: data.filter(d => {
+      recentUploads: safeData.filter((d) => {
         const uploadDate = new Date(d.created_at);
         const now = new Date();
         return uploadDate.getMonth() === now.getMonth() && uploadDate.getFullYear() === now.getFullYear();
@@ -206,7 +232,8 @@ export default function Documents() {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   }
 
-  const filteredDocuments = documents
+  const safeDocuments = Array.isArray(documents) ? documents : [];
+  const filteredDocuments = safeDocuments
     .filter((d) => categoryFilter === "all" || d.category === categoryFilter)
     .filter((d) => typeFilter === "all" || d.type === typeFilter)
     .filter((d) =>
@@ -438,7 +465,7 @@ export default function Documents() {
             onChange={change}
           >
             <MenuItem value="">-- {t("none") || "None"} --</MenuItem>
-            {projects.map((p) => (
+            {(Array.isArray(projects) ? projects : []).map((p) => (
               <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
             ))}
           </TextField>
@@ -452,7 +479,7 @@ export default function Documents() {
             onChange={change}
           >
             <MenuItem value="">-- {t("none") || "None"} --</MenuItem>
-            {clients.map((c) => (
+            {(Array.isArray(clients) ? clients : []).map((c) => (
               <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
             ))}
           </TextField>
@@ -466,7 +493,7 @@ export default function Documents() {
             onChange={change}
           >
             <MenuItem value="">-- {t("none") || "None"} --</MenuItem>
-            {suppliers.map((s) => (
+            {(Array.isArray(suppliers) ? suppliers : []).map((s) => (
               <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
             ))}
           </TextField>

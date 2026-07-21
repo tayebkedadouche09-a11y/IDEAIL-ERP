@@ -47,9 +47,14 @@ export default function CashFlow() {
       const res = await api.get("/financial/cash-movements", {
         params: dateFilter,
       });
-      setMovements(res.data || []);
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+      setMovements(data);
     } catch (err) {
-      console.log(err);
+      setMovements([]);
       setMessage({ type: "error", text: "Failed to load cash movements" });
     }
   }
@@ -71,11 +76,12 @@ export default function CashFlow() {
     setTimeout(() => setMessage({ type: "", text: "" }), 3000);
   }
 
-  const totalIncome = movements
+  const safeMovements = Array.isArray(movements) ? movements : [];
+  const totalIncome = safeMovements
     .filter((m) => m.movement_type === "income")
     .reduce((sum, m) => sum + Number(m.amount || 0), 0);
 
-  const totalExpense = movements
+  const totalExpense = safeMovements
     .filter((m) => m.movement_type === "expense")
     .reduce((sum, m) => sum + Number(m.amount || 0), 0);
 

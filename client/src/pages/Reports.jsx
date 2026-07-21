@@ -194,16 +194,60 @@ export default function Reports() {
     }
   }
 
-  function exportCSV() {
+  async function exportCSV() {
     if (!data) return;
-    const url = `http://localhost:3000/reports/export/${reportType}?start_date=${startDate}&end_date=${endDate}`;
-    window.open(url, "_blank");
+    try {
+      const params =
+        startDate && endDate
+          ? { start_date: startDate, end_date: endDate }
+          : {};
+      const res = await api.get(`/reports/export/${reportType}`, {
+        params,
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], {
+        type: res.headers?.["content-type"] || "text/csv",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${reportType}-${startDate || "all"}-${endDate || "all"}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setMessage({ type: "error", text: err.response?.data?.error || "Failed to export CSV" });
+      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+    }
   }
 
-  function exportPDF() {
+  async function exportPDF() {
     if (!data) return;
-    const url = `http://localhost:3000/reports/pdf/${reportType}?start_date=${startDate}&end_date=${endDate}`;
-    window.open(url, "_blank");
+    try {
+      const params =
+        startDate && endDate
+          ? { start_date: startDate, end_date: endDate }
+          : {};
+      const res = await api.get(`/reports/pdf/${reportType}`, {
+        params,
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], {
+        type: res.headers?.["content-type"] || "application/pdf",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${reportType}-${startDate || "all"}-${endDate || "all"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setMessage({ type: "error", text: err.response?.data?.error || "Failed to export PDF" });
+      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+    }
   }
 
   return (

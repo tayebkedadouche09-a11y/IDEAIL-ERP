@@ -81,6 +81,43 @@ router.get("/", (req, res) => {
   });
 });
 
+// Get calendar statistics.  These routes must be declared before /:id,
+// otherwise Express treats "stats" and "upcoming" as event identifiers.
+router.get("/stats/summary", (req, res) => {
+  const queries = {
+    total: "SELECT COUNT(*) as count FROM calendar_events",
+    thisMonth: "SELECT COUNT(*) as count FROM calendar_events WHERE strftime('%Y-%m', event_date) = strftime('%Y-%m', 'now')",
+    upcoming: "SELECT COUNT(*) as count FROM calendar_events WHERE event_date >= date('now') AND status = 'planned'",
+    completed: "SELECT COUNT(*) as count FROM calendar_events WHERE status = 'completed'",
+    projectDeadlines: "SELECT COUNT(*) as count FROM calendar_events WHERE type = 'project_deadline'",
+    paymentsDue: "SELECT COUNT(*) as count FROM calendar_events WHERE type = 'payment_due'",
+  };
+
+  const results = {};
+  let completed = 0;
+  Object.entries(queries).forEach(([key, sql]) => {
+    db.get(sql, [], (err, row) => {
+      results[key] = !err && row ? row.count || 0 : 0;
+      completed += 1;
+      if (completed === Object.keys(queries).length) res.json(results);
+    });
+  });
+});
+
+router.get("/upcoming/list", (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
+  db.all(
+    `SELECT c.*, p.name as project_name, cl.name as client_name
+     FROM calendar_events c
+     LEFT JOIN projects p ON c.project_id = p.id
+     LEFT JOIN clients cl ON c.client_id = cl.id
+     WHERE c.event_date >= date('now')
+     ORDER BY c.event_date ASC, c.start_time ASC LIMIT ?`,
+    [limit],
+    (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows)
+  );
+});
+
 // Get single event
 router.get("/:id", (req, res) => {
   const sql = `
@@ -201,54 +238,6 @@ router.delete("/:id", (req, res) => {
   });
 });
 
-// Get calendar statistics
-router.get("/stats/summary", (req, res) => {
-  const queries = {
-    total: "SELECT COUNT(*) as count FROM calendar_events",
-    thisMonth: "SELECT COUNT(*) as count FROM calendar_events WHERE strftime('%Y-%m', event_date) = strftime('%Y-%m', 'now')",
-    upcoming: "SELECT COUNT(*) as count FROM calendar_events WHERE event_date >= date('now') AND status = 'planned'",
-    completed: "SELECT COUNT(*) as count FROM calendar_events WHERE status = 'completed'",
-    projectDeadlines: "SELECT COUNT(*) as count FROM calendar_events WHERE type = 'project_deadline'",
-    paymentsDue: "SELECT COUNT(*) as count FROM calendar_events WHERE type = 'payment_due'",
-  };
-
-  let results = {};
-  let completed = 0;
-
-  Object.entries(queries).forEach(([key, sql]) => {
-    db.get(sql, [], (err, row) => {
-      if (!err && row) results[key] = row.count || 0;
-      else results[key] = 0;
-      completed++;
-      if (completed === Object.keys(queries).length) {
-        res.json(results);
-      }
-    });
-  });
-});
-
-// Get upcoming events
-router.get("/upcoming/list", (req, res) => {
-  const { limit = 10 } = req.query;
-  
-  const sql = `
-    SELECT c.*, 
-           p.name as project_name, 
-           cl.name as client_name
-    FROM calendar_events c
-    LEFT JOIN projects p ON c.project_id = p.id
-    LEFT JOIN clients cl ON c.client_id = cl.id
-    WHERE c.event_date >= date('now')
-    ORDER BY c.event_date ASC, c.start_time ASC
-    LIMIT ?
-  `;
-
-  db.all(sql, [parseInt(limit)], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
 // =======================================
 // AUTOMATIC SYNC ENDPOINTS (Phase 7)
 // =======================================
@@ -316,8 +305,8 @@ router.post("/sync/payment-due-dates", (req, res) => {
         if (invoice.due_date >= today) {
           // Check if due date already exists
           db.get(
-            "SELECT id FROM calendar_events WHERE invoice_reference = ?",
-            [invoice.invoice_number],
+            "SELECT id FROM calendar_events WHERE type = 'payment_due' AND title = ?",
+            [`Payment Due: ${invoice.invoice_number}`],
             (err2, existing) => {
               if (err2 || existing) return;
 

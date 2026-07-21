@@ -2,6 +2,13 @@ const db = require("../database");
 
 // Role definitions with module permissions
 const ROLE_PERMISSIONS = {
+  // Existing installations use `admin`; the specification calls this role
+  // Administrator.  Supporting both keeps the permission model backwards
+  // compatible while enforcing the same access level.
+  admin: {
+    modules: "*",
+    permissions: ["create", "read", "update", "delete"],
+  },
   administrator: {
     modules: "*",
     permissions: ["create", "read", "update", "delete"],
@@ -11,15 +18,15 @@ const ROLE_PERMISSIONS = {
     permissions: ["create", "read", "update", "delete"],
   },
   project_manager: {
-    modules: ["projects", "projectMaterials", "projectExpenses", "employees", "reports"],
+    modules: ["projects", "systems", "employees", "reports", "calculator", "profitability"],
     permissions: ["create", "read", "update", "delete"],
   },
   storekeeper: {
-    modules: ["products", "stock", "inventory", "documents"],
+    modules: ["products", "stock", "inventory", "documents", "systems"],
     permissions: ["create", "read", "update", "delete"],
   },
   employee: {
-    modules: ["attendance", "documents", "projects"],
+    modules: ["attendance", "documents", "projects", "calendar"],
     permissions: ["read", "create"],
   },
 };
@@ -30,11 +37,19 @@ const MODULE_MAP = {
   "/clients/": "clients",
   "/suppliers": "suppliers",
   "/employees": "employees",
+  "/employee-evaluations": "employees",
   "/projects": "projects",
+  "/project-materials": "projects",
+  "/project-expenses": "projects",
+  "/profitability": "profitability",
   "/products": "products",
   "/stock": "stock",
+  "/system-products": "systems",
+  "/systems": "systems",
+  "/calculator": "calculator",
   "/invoices": "invoices",
   "/devis": "invoices",
+  "/quotations": "invoices",
   "/payments": "payments",
   "/expenses": "expenses",
   "/reports": "reports",
@@ -43,6 +58,13 @@ const MODULE_MAP = {
   "/calendar": "calendar",
   "/backup": "backup",
   "/financial": "financial",
+  "/calendar": "calendar",
+  "/inventory": "inventory",
+  "/backup": "backup",
+  "/automation": "automation",
+  "/audit": "audit",
+  "/assistant": "assistant",
+  "/ai": "assistant",
 };
 
 /**
@@ -126,15 +148,28 @@ function requireModuleAccess(req, res, next) {
     }
   }
 
-  // Default allow if no specific module restriction
-  if (!moduleName || roleConfig.modules.includes(moduleName)) {
-    return next();
+  // Routes not assigned to a business module (health checks, notifications,
+  // etc.) are authenticated but do not need a module entitlement.
+  if (!moduleName) return next();
+
+  if (!roleConfig.modules.includes(moduleName)) {
+    return res.status(403).json({
+      error: "Access denied. You do not have permission to access this module.",
+      required_module: moduleName,
+      your_role: userRole,
+    });
   }
 
-  res.status(403).json({
-    error: "Access denied. You do not have permission to access this module.",
-    your_role: userRole,
-  });
+  const action = { POST: "create", PUT: "update", PATCH: "update", DELETE: "delete" }[req.method] || "read";
+  if (!roleConfig.permissions.includes(action)) {
+    return res.status(403).json({
+      error: "Access denied. You do not have the required permission.",
+      required_action: action,
+      your_role: userRole,
+    });
+  }
+
+  next();
 }
 
 /**

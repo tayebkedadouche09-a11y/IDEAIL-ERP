@@ -40,13 +40,18 @@ export default function Assistant() {
   async function loadHistory() {
     try {
       const res = await api.get("/assistant/history");
-      const history = res.data.map((h) => [
+      const items = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+      const history = items.map((h) => [
         { type: "user", text: h.question, time: h.created_at },
         { type: "ai", text: h.answer, time: h.created_at },
       ]);
       setMessages(history.flat());
     } catch (error) {
-      console.log(error);
+      setMessages([]);
     }
   }
 
@@ -92,7 +97,7 @@ export default function Assistant() {
         <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <EnterpriseSection title="AI Assistant Chat" sx={{ flex: 1, mb: 2 }}>
             <Box sx={{ height: 400, overflowY: "auto", mb: 2 }}>
-              {messages.map((msg, index) => (
+              {(Array.isArray(messages) ? messages : []).map((msg, index) => (
                 <Box
                   key={index}
                   sx={{

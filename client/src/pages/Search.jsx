@@ -113,7 +113,7 @@ export default function Search() {
             label={t("search")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && performSearch()}
+            onKeyDown={(e) => e.key === "Enter" && performSearch()}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">

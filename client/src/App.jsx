@@ -34,6 +34,16 @@ import Payroll from "./pages/Payroll";
 import Calendar from "./pages/Calendar";
 import Backup from "./pages/Backup";
 import Search from "./pages/Search";
+import EnterpriseModule from "./pages/EnterpriseModule";
+
+const ENTERPRISE_MODULES = [
+  ["companies", "companies"], ["accounts", "accounts"], ["periods", "periods"],
+  ["journal-entries", "journalEntries"], ["purchase-requests", "purchaseRequests"],
+  ["assets", "assets"], ["quality", "qualityInspections"], ["boms", "billsOfMaterials"],
+  ["production", "productionOrders"], ["leads", "leads"], ["tasks", "tasks"], ["teams", "teams"],
+  ["contracts", "contracts"], ["report-designer", "reportTemplates"], ["workflows", "workflows"],
+  ["approvals", "approvals"], ["portal-requests", "portalRequests"], ["maintenance", "maintenance"],
+];
 
 function App() {
   return (
@@ -383,6 +393,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {ENTERPRISE_MODULES.map(([path, module]) => (
+          <Route key={path} path={`/${path}`} element={<ProtectedRoute><Layout><EnterpriseModule module={module} /></Layout></ProtectedRoute>} />
+        ))}
       </Routes>
     </BrowserRouter>
   );
